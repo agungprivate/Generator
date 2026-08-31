@@ -246,30 +246,33 @@
     <script>
         let currentMode = 'downtime';
 
-        function setMode(mode) {
-            currentMode = mode;
-            
-            const tabButtons = [
-                { id: 'btnMode1', key: 'downtime' },
-                { id: 'btnMode2', key: 'excel' },
-                { id: 'btnMode3', key: 'naming' },
-                { id: 'btnMode4', key: 'rework' }
-            ];
+       function setMode(mode) {
+    currentMode = mode;
+    
+    const tabButtons = [
+        { id: 'btnMode1', key: 'downtime' },
+        { id: 'btnMode2', key: 'excel' },
+        { id: 'btnMode3', key: 'naming' },
+        { id: 'btnMode4', key: 'rework' }
+    ];
 
-            tabButtons.forEach(tab => {
-                const el = document.getElementById(tab.id);
-                if (el) {
-                    if (tab.key === mode) {
-                        el.classList.add('active');
-                    } else {
-                        el.classList.remove('active');
-                    }
-                }
-            });
-
-            const outputEl = document.getElementById('outputText');
-            if (outputEl) outputEl.value = '';
+    tabButtons.forEach(tab => {
+        const el = document.getElementById(tab.id);
+        if (el) {
+            if (tab.key === mode) {
+                el.classList.add('active');
+            } else {
+                el.classList.remove('active');
+            }
         }
+    });
+
+    // Menghapus kedua kolom (Input Data dan Hasil Format)
+    const inputEl = document.getElementById('inputText');
+    const outputEl = document.getElementById('outputText');
+    if (inputEl) inputEl.value = '';
+    if (outputEl) outputEl.value = '';
+}
 
         function cleanText(str) {
             if (!str) return '';
