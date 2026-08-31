@@ -23,8 +23,6 @@
             --primary-light: #eff6ff;
             --success: #10b981;
             --success-hover: #059669;
-            --info: #0ea5e9;
-            --info-hover: #0284c7;
             --text-main: #0f172a;
             --text-muted: #64748b;
             --border-color: #e2e8f0;
@@ -158,15 +156,16 @@
 
         /* ACTIONS */
         .actions {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 12px;
+            display: flex;
+            justify-content: center;
             margin-top: 20px;
         }
 
         button.action-btn {
-            padding: 12px;
-            font-size: 13px;
+            width: 100%;
+            max-width: 320px;
+            padding: 14px;
+            font-size: 14px;
             font-weight: 600;
             border: none;
             border-radius: 12px;
@@ -175,7 +174,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 6px;
+            gap: 8px;
         }
 
         button.action-btn:active {
@@ -189,25 +188,6 @@
         }
         .btn-convert:hover {
             background: var(--success-hover);
-        }
-
-        .btn-copy {
-            background: var(--info);
-            color: #ffffff;
-            box-shadow: 0 4px 12px rgba(14, 165, 233, 0.2);
-        }
-        .btn-copy:hover {
-            background: var(--info-hover);
-        }
-
-        .btn-clear {
-            background: #f1f5f9;
-            color: var(--text-muted);
-            border: 1px solid var(--border-color);
-        }
-        .btn-clear:hover {
-            background: #e2e8f0;
-            color: var(--text-main);
         }
 
         /* TOAST */
@@ -257,13 +237,11 @@
         </div>
 
         <div class="actions">
-            <button class="action-btn btn-convert" type="button" onclick="processFormat()">🔄️ Convert</button>
-            <button class="action-btn btn-copy" type="button" onclick="copyOutput()">📋 Copy</button>
-            <button class="action-btn btn-clear" type="button" onclick="clearAll()">🧹 Clear</button>
+            <button class="action-btn btn-convert" type="button" onclick="processFormat()">🔄️ Convert & Copy</button>
         </div>
     </div>
 
-    <div class="copied-toast" id="toast">✅ Berhasil disalin ke clipboard!</div>
+    <div class="copied-toast" id="toast">✅ Hasil berhasil dikonversi dan disalin!</div>
 
     <script>
         let currentMode = 'downtime';
@@ -289,7 +267,8 @@
                 }
             });
 
-            clearAll();
+            const outputEl = document.getElementById('outputText');
+            if (outputEl) outputEl.value = '';
         }
 
         function cleanText(str) {
@@ -300,7 +279,6 @@
         function extractBlock(keyword, text) {
             if (!text || !keyword) return '';
             const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-            // Hanya cocokkan keyword yang diikuti pembatas : = - dan abaikan simbol liar di sekitarnya
             const regex = new RegExp('(?:^|\\n)[\\s*_\\[\\]()#–-]*' + escaped + '[\\s*_\\[\\]()#–-]*[:=–-]\\s*(.*)', 'i');
             const match = text.match(regex);
             if (!match) return '';
@@ -314,7 +292,6 @@
             return cleanText(val);
         }
 
-        // FORMAT PIC WRINKLE (nama1, nama2 & nama3)
         function formatPicWrinkle(rawPic) {
             if (!rawPic) return '';
             let names = rawPic
@@ -640,6 +617,16 @@
             return results.join('\n');
         }
 
+        function showToast() {
+            const toast = document.getElementById('toast');
+            if (toast) {
+                toast.style.display = 'block';
+                setTimeout(() => { 
+                    toast.style.display = 'none'; 
+                }, 2000);
+            }
+        }
+
         function processFormat() {
             const inputEl = document.getElementById('inputText');
             const outputEl = document.getElementById('outputText');
@@ -661,30 +648,16 @@
                 output = formatRework(input);
             }
 
-            if (outputEl) outputEl.value = output;
-        }
-
-        function copyOutput() {
-            const outputEl = document.getElementById('outputText');
-            if (!outputEl || !outputEl.value) return;
-            
-            outputEl.select();
-            navigator.clipboard.writeText(outputEl.value).then(() => {
-                const toast = document.getElementById('toast');
-                if (toast) {
-                    toast.style.display = 'block';
-                    setTimeout(() => { 
-                        toast.style.display = 'none'; 
-                    }, 2000);
-                }
-            });
-        }
-
-        function clearAll() {
-            const inputEl = document.getElementById('inputText');
-            const outputEl = document.getElementById('outputText');
-            if (inputEl) inputEl.value = '';
-            if (outputEl) outputEl.value = '';
+            if (outputEl) {
+                outputEl.value = output;
+                outputEl.select();
+                navigator.clipboard.writeText(output).then(() => {
+                    showToast();
+                }).catch(() => {
+                    document.execCommand('copy');
+                    showToast();
+                });
+            }
         }
     </script>
 </body>
