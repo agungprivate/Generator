@@ -300,13 +300,13 @@
         function extractBlock(keyword, text) {
             if (!text || !keyword) return '';
             const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-            // Mencari keyword dengan berbagai variasi pemisah (: = - spasi)
-            const regex = new RegExp('(?:^|\n)[\s*_-]*' + escaped + '[\s*_-]*(?:[:=–-]|\s|$)\s*(.*)', 'i');
+            // Hanya cocokkan keyword yang diikuti pembatas : = - dan abaikan simbol liar di sekitarnya
+            const regex = new RegExp('(?:^|\\n)[\\s*_\\[\\]()#–-]*' + escaped + '[\\s*_\\[\\]()#–-]*[:=–-]\\s*(.*)', 'i');
             const match = text.match(regex);
             if (!match) return '';
             
             let val = match[1] ? cleanText(match[1]) : '';
-            if (!val || /^[\s*_-]*$/.test(val)) {
+            if (!val || /^[\s*_\\[\\]()–-]*$/.test(val)) {
                 let after = text.substring(match.index + match[0].length).trim();
                 let firstLine = after.split('\n')[0];
                 return cleanText(firstLine);
@@ -375,7 +375,6 @@
             result += `Action :\n`;
             result += (formattedActions.length > 0 ? formattedActions.join('\n') : '');
             
-            // Tambahkan baris kosong sebelum Part Replacement jika ada
             if (partReplacement && partReplacement !== '-') {
                 result += `\n\nPart Replacement: ${partReplacement}`;
             }
@@ -393,10 +392,6 @@
             }
 
             let problem = extractBlock('Problem', text);
-            if (!problem) {
-                let matchProb = text.match(/(?:Problem|Kendala|Issue)\s*[:=–-]?\s*(.*)/i);
-                if (matchProb) problem = cleanText(matchProb[1]);
-            }
 
             let timeRaw = extractBlock('TIME', text) || extractBlock('Jam', text) || extractBlock('Waktu', text);
             if (!timeRaw) {
@@ -410,7 +405,6 @@
             let picRaw = extractBlock('PIC', text);
             let pic = formatPicWrinkle(picRaw);
 
-            // Split TIME & Count jika ada lebih dari 1
             let splitRegex = /[,\/;&]+|\b(?:dan|and)\b/i;
             
             let times = timeRaw
@@ -458,12 +452,11 @@
             return `${line}_${jam}_${lotId}_${pouchLot}_${status}`;
         }
 
-                // FUNGSI KLASIFIKASI NG NAME (REWORK)
+        // FUNGSI KLASIFIKASI NG NAME (REWORK)
         function matchKlasifikasiNG(fullText, ngRaw) {
             let ng_lower = (ngRaw || '').toLowerCase();
             let full_lower = (fullText || '').toLowerCase();
             
-            // Deteksi tanda (+) atau (-)
             let sign = '-';
             if (ng_lower.includes('(+)') || ng_lower.includes('plus') || full_lower.includes('(+)') || full_lower.includes('plus')) {
                 sign = '+';
@@ -490,7 +483,7 @@
             if (ng_lower.includes('ir contact')) {
                 return 'IR Contact';
             }
-            if (/(ir\s*lc|lc)/i.test(ng_lower) || ng_lower.includes('lead contact')) {
+            if (/ (ir\s*lc|lc) /i.test(ng_lower) || ng_lower.includes('lead contact')) {
                 return 'Lead Contact';
             }
             if (ng_lower.includes('v sealing') || ng_lower.includes('v-sealing') || ng_lower.includes('vsealing')) {
@@ -505,7 +498,7 @@
                 return 'Lead Vision';
             }
 
-            // --- 3. SECTION TW (Prioritaskan NG spesifik sebelum generic 'overkill') ---
+            // --- 3. SECTION TW ---
             if (ng_lower.includes('wrong tab') || ng_lower.includes('tab direction') || ng_lower.includes('wrong direction')) {
                 return 'Wrong Tab Direction';
             }
@@ -543,7 +536,7 @@
             return ngRaw;
         }
 
-                // FUNGSI KLASIFIKASI REASON FAILED (REWORK)
+        // FUNGSI KLASIFIKASI REASON FAILED (REWORK)
         function matchReasonFailed(detailReason, fullText) {
             let dr = (detailReason || '').toLowerCase();
             let ft = (fullText || '').toLowerCase();
