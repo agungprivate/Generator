@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Report Generator</title>
+    
+    <!-- FAVICON TAB BROWSER -->
+    <link rel="icon" type="image/png" href="logo.png">
+
+    <!-- GOOGLE FONTS (Inter) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- MODERN CLEAN STYLING -->
+    <style>
+        :root {
+            --bg-body: #f8fafc;
+            --card-bg: #ffffff;
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --primary-light: #eff6ff;
+            --success: #10b981;
+            --success-hover: #059669;
+            --info: #0ea5e9;
+            --info-hover: #0284c7;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border-color: #e2e8f0;
+            --input-bg: #f8fafc;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            min-height: 100vh;
+            padding: 24px 16px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 960px;
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 28px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.04), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+            border: 1px solid var(--border-color);
+        }
+
+        .header-title {
+            text-align: center;
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--text-main);
+            margin-bottom: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        /* TABS */
+        .mode-selector {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 24px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn-mode {
+            padding: 10px 20px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-body);
+            color: var(--text-muted);
+            font-weight: 600;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 13px;
+        }
+
+        .btn-mode:hover {
+            background: #f1f5f9;
+            color: var(--text-main);
+        }
+
+        .btn-mode.active {
+            background: var(--primary);
+            color: #ffffff;
+            border-color: var(--primary);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+        }
+
+        /* GRID */
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .panel {
+            display: flex;
+            flex-direction: column;
+        }
+
+        label {
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--text-main);
+            font-size: 13px;
+            letter-spacing: -0.01em;
+        }
+
+        textarea {
+            width: 100%;
+            height: 280px;
+            padding: 14px;
+            border: 1px solid var(--border-color);
+            background: var(--input-bg);
+            border-radius: 12px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-size: 13px;
+            line-height: 1.5;
+            resize: vertical;
+            outline: none;
+            color: var(--text-main);
+            transition: border-color 0.2s, box-shadow 0.2s, background-color 0.2s;
+        }
+
+        textarea:focus {
+            background-color: #ffffff;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+        }
+
+        textarea#outputText {
+            background: #f1f5f9;
+            color: #334155;
+        }
+
+        /* ACTIONS */
+        .actions {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-top: 20px;
+        }
+
+        button.action-btn {
+            padding: 12px;
+            font-size: 13px;
+            font-weight: 600;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        button.action-btn:active {
+            transform: scale(0.98);
+        }
+
+        .btn-convert {
+            background: var(--success);
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+        }
+        .btn-convert:hover {
+            background: var(--success-hover);
+        }
+
+        .btn-copy {
+            background: var(--info);
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(14, 165, 233, 0.2);
+        }
+        .btn-copy:hover {
+            background: var(--info-hover);
+        }
+
+        .btn-clear {
+            background: #f1f5f9;
+            color: var(--text-muted);
+            border: 1px solid var(--border-color);
+        }
+        .btn-clear:hover {
+            background: #e2e8f0;
+            color: var(--text-main);
+        }
+
+        /* TOAST */
+        .copied-toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: #0f172a;
+            color: #ffffff;
+            padding: 12px 20px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 500;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+            display: none;
+            z-index: 9999;
+            animation: fadeIn 0.2s ease forwards;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1 class="header-title">Report Generator</h1>
+        
+        <div class="mode-selector">
+            <button class="btn-mode active" id="btnMode1" type="button" onclick="setMode('downtime')">Losskey</button>
+            <button class="btn-mode" id="btnMode2" type="button" onclick="setMode('excel')">Wrinkle</button>
+            <button class="btn-mode" id="btnMode3" type="button" onclick="setMode('naming')">Crack</button>
+            <button class="btn-mode" id="btnMode4" type="button" onclick="setMode('rework')">Rework</button>
+        </div>
+
+        <div class="grid">
+            <div class="panel">
+                <label for="inputText">Input Data</label>
+                <textarea id="inputText" placeholder="Tempel teks di sini..."></textarea>
+            </div>
+            <div class="panel">
+                <label for="outputText">Hasil Format</label>
+                <textarea id="outputText" readonly placeholder="Hasil konversi akan tampil di sini..."></textarea>
+            </div>
+        </div>
+
+        <div class="actions">
+            <button class="action-btn btn-convert" type="button" onclick="processFormat()">🔄️ Convert</button>
+            <button class="action-btn btn-copy" type="button" onclick="copyOutput()">📋 Copy</button>
+            <button class="action-btn btn-clear" type="button" onclick="clearAll()">🧹 Clear</button>
+        </div>
+    </div>
+
+    <div class="copied-toast" id="toast">✅ Berhasil disalin ke clipboard!</div>
+
+    <script>
+        let currentMode = 'downtime';
+
+        function setMode(mode) {
+            currentMode = mode;
+            
+            const tabButtons = [
+                { id: 'btnMode1', key: 'downtime' },
+                { id: 'btnMode2', key: 'excel' },
+                { id: 'btnMode3', key: 'naming' },
+                { id: 'btnMode4', key: 'rework' }
+            ];
+
+            tabButtons.forEach(tab => {
+                const el = document.getElementById(tab.id);
+                if (el) {
+                    if (tab.key === mode) {
+                        el.classList.add('active');
+                    } else {
+                        el.classList.remove('active');
+                    }
+                }
+            });
+
+            clearAll();
+        }
+
+        function cleanText(str) {
+            if (!str) return '';
+            return str.replace(/^[\s:*–=-]+|[\s:*–=-]+$/g, '').trim();
+        }
+
+        function extractBlock(keyword, text) {
+            if (!text || !keyword) return '';
+            const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            // Mencari keyword dengan berbagai variasi pemisah (: = - spasi)
+            const regex = new RegExp('(?:^|\n)[\s*_-]*' + escaped + '[\s*_-]*(?:[:=–-]|\s|$)\s*(.*)', 'i');
+            const match = text.match(regex);
+            if (!match) return '';
+            
+            let val = match[1] ? cleanText(match[1]) : '';
+            if (!val || /^[\s*_-]*$/.test(val)) {
+                let after = text.substring(match.index + match[0].length).trim();
+                let firstLine = after.split('\n')[0];
+                return cleanText(firstLine);
+            }
+            return cleanText(val);
+        }
+
+        // FORMAT PIC WRINKLE (nama1, nama2 & nama3)
+        function formatPicWrinkle(rawPic) {
+            if (!rawPic) return '';
+            let names = rawPic
+                .split(/[\/,]|\b(?:dan|and)\b|&/gi)
+                .map(n => cleanText(n))
+                .filter(n => n.length > 0);
+
+            if (names.length === 0) return '';
+            if (names.length === 1) return names[0];
+            if (names.length === 2) return `${names[0]} & ${names[1]}`;
+            
+            let last = names.pop();
+            return `${names.join(', ')} & ${last}`;
+        }
+
+        // 1. FORMAT LOSSKEY
+        function formatDowntime(text) {
+            let section = extractBlock('Section', text);
+            let location = extractBlock('Location', text);
+            let problem = extractBlock('Problem', text);
+            let cause = extractBlock('Cause', text);
+            let pic = extractBlock('PIC', text);
+            let partReplacement = extractBlock('Part Replacement', text);
+
+            let rawActions = [];
+            let lines = text.split('\n');
+            let isAction = false;
+
+            for (let line of lines) {
+                let trimmed = line.trim();
+                if (/^[\s*_-]*(Countermeasure|Action)[\s*_-]*[:=]?/i.test(trimmed)) {
+                    isAction = true;
+                    let afterHeader = trimmed.replace(/^[\s*_-]*(Countermeasure|Action)[\s*_-]*[:=]?/i, '').trim();
+                    if (afterHeader.length > 0) {
+                        let clean = afterHeader.replace(/^(\d+[.)]|[-*•])\s*/, '').replace(/[*_]/g, '').trim();
+                        if (clean) rawActions.push(clean);
+                    }
+                    continue;
+                }
+                if (isAction) {
+                    if (/^[\s*_-]*(Result|Part Replacement|PIC|Qty Defect|Start Time|End Time|Duration|Stop Status|Status|Note|Risk Range)[\s*_-]*[:=]/i.test(trimmed)) {
+                        isAction = false;
+                        continue;
+                    }
+                    if (trimmed.length > 0) {
+                        let cleanAction = trimmed.replace(/^(\d+[.)]|[-*•])\s*/, '').replace(/[*_]/g, '').trim();
+                        if (cleanAction) rawActions.push(cleanAction);
+                    }
+                }
+            }
+
+            let formattedActions = rawActions.map((act, idx) => `${idx + 1}. ${act}`);
+
+            let result = `${section || 'Section'} // ${location || 'Location'} // ${problem || 'Problem'} //\n`;
+            if (cause && cause !== '-') {
+                result += `${cause} //\n`;
+            }
+            result += `Action :\n`;
+            result += (formattedActions.length > 0 ? formattedActions.join('\n') : '');
+            
+            // Tambahkan baris kosong sebelum Part Replacement jika ada
+            if (partReplacement && partReplacement !== '-') {
+                result += `\n\nPart Replacement: ${partReplacement}`;
+            }
+            
+            result += `\n//\nPIC : ${pic || '-'}`;
+            return result;
+        }
+
+        // 2. FORMAT WRINKLE
+        function formatExcel(text) {
+            let line = extractBlock('Line', text);
+            if (!line) {
+                let matchLine = text.match(/(?:Line|PKG)?\s*[:=–-]?\s*(PKG\s*[0-9]+-[0-9]+|[0-9]+-[0-9]+)/i);
+                if (matchLine) line = matchLine[1].toUpperCase();
+            }
+
+            let problem = extractBlock('Problem', text);
+            if (!problem) {
+                let matchProb = text.match(/(?:Problem|Kendala|Issue)\s*[:=–-]?\s*(.*)/i);
+                if (matchProb) problem = cleanText(matchProb[1]);
+            }
+
+            let timeRaw = extractBlock('TIME', text) || extractBlock('Jam', text) || extractBlock('Waktu', text);
+            if (!timeRaw) {
+                let matchTimes = text.match(/\b\d{1,2}[.:]\d{2}\b/g);
+                if (matchTimes) timeRaw = matchTimes.join(' & ');
+            }
+
+            let pouchId = extractBlock('Pouch ID', text) || extractBlock('Pouch Lot', text) || extractBlock('Pouch', text) || extractBlock('Lot Pouch', text);
+            let countRaw = extractBlock('Count', text);
+            
+            let picRaw = extractBlock('PIC', text);
+            let pic = formatPicWrinkle(picRaw);
+
+            // Split TIME & Count jika ada lebih dari 1
+            let splitRegex = /[,\/;&]+|\b(?:dan|and)\b/i;
+            
+            let times = timeRaw
+                ? timeRaw.split(splitRegex).map(t => t.trim().replace(/(\d{1,2})\.(\d{2})/, '$1:$2')).filter(t => t.length > 0)
+                : [];
+            let counts = countRaw
+                ? countRaw.split(splitRegex).map(c => c.trim().replace(/\./g, '')).filter(c => c.length > 0)
+                : [];
+
+            let maxLen = Math.max(times.length, counts.length, 1);
+            let rows = [];
+
+            for (let i = 0; i < maxLen; i++) {
+                let t = times[i] !== undefined ? times[i] : (times[0] || '');
+                let c = counts[i] !== undefined ? counts[i] : (counts[0] || '');
+                rows.push(`${line}\t${problem}\t${t}\t${pouchId}\t${c}\t${pic}`);
+            }
+
+            return rows.join('\n');
+        }
+
+        // 3. FORMAT CRACK (VISION NAMING)
+        function formatVisionNaming(text) {
+            let lineMatch = text.match(/(?:Line|PKG)\s*[:=]?\s*([0-9]+-[0-9]+)/i);
+            let line = lineMatch ? lineMatch[1] : '';
+
+            let jamRaw = extractBlock('Jam', text) || extractBlock('Time', text);
+            let jam = jamRaw.replace(/[^0-9]/g, '');
+
+            let lotId = extractBlock('Lot ID', text);
+            let pouchLot = extractBlock('Pouch Lot', text) || extractBlock('Pouch ID', text);
+
+            let status = 'OVERKILL';
+            let lowerText = text.toLowerCase();
+            if (lowerText.includes('overkill')) {
+                status = 'OVERKILL';
+            } else if (lowerText.includes('pinhole')) {
+                status = 'PINHOLE';
+            } else if (lowerText.includes('crack')) {
+                status = 'CRACK';
+            } else if (lowerText.includes('ng')) {
+                status = 'NG';
+            }
+
+            return `${line}_${jam}_${lotId}_${pouchLot}_${status}`;
+        }
+
+                // FUNGSI KLASIFIKASI NG NAME (REWORK)
+        function matchKlasifikasiNG(fullText, ngRaw) {
+            let ng_lower = (ngRaw || '').toLowerCase();
+            let full_lower = (fullText || '').toLowerCase();
+            
+            // Deteksi tanda (+) atau (-)
+            let sign = '-';
+            if (ng_lower.includes('(+)') || ng_lower.includes('plus') || full_lower.includes('(+)') || full_lower.includes('plus')) {
+                sign = '+';
+            } else if (ng_lower.includes('(-)') || ng_lower.includes('minus') || full_lower.includes('(-)') || full_lower.includes('minus')) {
+                sign = '-';
+            }
+
+            // --- 1. SECTION EL ---
+            if (ng_lower.includes('weight after') || ng_lower.includes('after e/f') || ng_lower.includes('after ef')) {
+                return 'Weight After E/F';
+            }
+            if (ng_lower.includes('weight before') || ng_lower.includes('before e/f') || ng_lower.includes('before ef')) {
+                return 'Weight Before E/F';
+            }
+            if (ng_lower.includes('ir bcr') || ng_lower.includes('barcode read') || ng_lower.includes('read ng') || ng_lower.includes('bcr ng')) {
+                return 'Barcode Read NG';
+            }
+            if (ng_lower.includes('it validation') || ng_lower.includes('barcode it')) {
+                return 'Barcode IT Validation';
+            }
+            if (ng_lower.includes('verify ng') || ng_lower.includes('barcode verify')) {
+                return 'Barcode Verify NG';
+            }
+            if (ng_lower.includes('ir contact')) {
+                return 'IR Contact';
+            }
+            if (/(ir\s*lc|lc)/i.test(ng_lower) || ng_lower.includes('lead contact')) {
+                return 'Lead Contact';
+            }
+            if (ng_lower.includes('v sealing') || ng_lower.includes('v-sealing') || ng_lower.includes('vsealing')) {
+                return 'V Sealing';
+            }
+
+            // --- 2. SECTION CA ---
+            if (ng_lower.includes('sealing vision') || ng_lower.includes('sealing ng') || ng_lower.includes('sealing')) {
+                return 'Sealing Vision';
+            }
+            if (ng_lower.includes('lead vision') || ng_lower.includes('vision lead')) {
+                return 'Lead Vision';
+            }
+
+            // --- 3. SECTION TW (Prioritaskan NG spesifik sebelum generic 'overkill') ---
+            if (ng_lower.includes('wrong tab') || ng_lower.includes('tab direction') || ng_lower.includes('wrong direction')) {
+                return 'Wrong Tab Direction';
+            }
+            if (ng_lower.includes('no lead') || ng_lower.includes('nolead')) {
+                return 'No Lead';
+            }
+            if (ng_lower.includes('short contact') || ng_lower.includes('short check') || ng_lower.includes('short')) {
+                return 'Short Contact';
+            }
+            if (ng_lower.includes('tab burr') || ng_lower.includes('burr')) {
+                return `Tab Burr (${sign})`;
+            }
+            if (ng_lower.includes('tab press') || ng_lower.includes('press')) {
+                return `Tab Press (${sign})`;
+            }
+            if (ng_lower.includes('main weld') || ng_lower.includes('mainweld') || ng_lower.includes('main_weld')) {
+                return `Main Weld (${sign})`;
+            }
+            if (ng_lower.includes('leadfilm') || ng_lower.includes('lead film') || ng_lower.includes('lead fim') || (ng_lower.includes('lead') && ng_lower.includes('film'))) {
+                return `Lead Film (${sign})`;
+            }
+            if (ng_lower.includes('sepa') || ng_lower.includes('separator')) {
+                return `Sepa (${sign})`;
+            }
+            if (ng_lower.includes('cpp tape') || ng_lower.includes('tape') || ng_lower.includes('cpp')) {
+                return `CPP Tape (${sign})`;
+            }
+            if (ng_lower.includes('gap')) {
+                return `GAP (${sign})`;
+            }
+            if (ng_lower.includes('dimension') || ng_lower.includes('overkill')) {
+                return `Dimension Overkill (${sign})`;
+            }
+
+            return ngRaw;
+        }
+
+                // FUNGSI KLASIFIKASI REASON FAILED (REWORK)
+        function matchReasonFailed(detailReason, fullText) {
+            let dr = (detailReason || '').toLowerCase();
+            let ft = (fullText || '').toLowerCase();
+
+            if (dr.includes('alignment')) {
+                return '[Cell Crash] Alignment';
+            }
+            if (dr.includes('tab cutter') || dr.includes('cutter')) {
+                return '[Lead Crash] Tab Cutter';
+            }
+            if (dr.includes('mask jig') || dr.includes('mask')) {
+                return '[Lead Crash] Mask Jig';
+            }
+            if (dr.includes('preweld') || dr.includes('pre welder') || dr.includes('pre-welder')) {
+                return '[Lead Crash] Pre Welder';
+            }
+            if (dr.includes('another ng') || dr.includes('be another')) {
+                return 'Be Another NG';
+            }
+            if (dr.includes('lot change')) {
+                return 'LOT Change';
+            }
+            if (dr.includes('2x input') || dr.includes('real ng') || dr.includes('2x')) {
+                return '[2X Input] Real NG';
+            }
+            if (dr.includes('raw material') || dr.includes('material ng')) {
+                return 'Raw Material NG';
+            }
+            return '';
+        }
+
+        // 4. FORMAT REWORK
+        function formatRework(text) {
+            let lineMatch = text.match(/(?:#|Line|PKG)?\s*([0-9]+-[0-9]+)/i);
+            let line = lineMatch ? `PKG ${lineMatch[1]}` : '';
+
+            let ngRaw = extractBlock('NG', text);
+            if (!ngRaw) {
+                let matchNg = text.match(/(?:^|\n)[\s*•_–.-]*NG\s*[:=–-]?\s*(.*)/i);
+                if (matchNg) ngRaw = cleanText(matchNg[1]);
+            }
+            let ngName = matchKlasifikasiNG(text, ngRaw);
+
+            let section = 'TW';
+            let lowerText = text.toLowerCase();
+            let lowerNg = (ngName || '').toLowerCase();
+
+            if (lowerText.includes('cell assy') || lowerText.includes('ca') || lowerNg.includes('sealing vision') || lowerNg.includes('lead vision')) {
+                section = 'CA';
+            } else if (/\bEL\b|Filling/i.test(text) || lowerNg.includes('weight') || lowerNg.includes('barcode') || lowerNg.includes('ir contact') || lowerNg.includes('lead contact') || lowerNg.includes('v sealing')) {
+                section = 'EL';
+            } else {
+                section = 'TW';
+            }
+
+            let cellIdRaw = extractBlock('Cell ID', text) || extractBlock('CellID', text) || extractBlock('Cell', text);
+            if (!cellIdRaw) {
+                let matchCell = text.match(/(?:Cell\s*ID|CellID)\s*[:=–-]?\s*([A-Za-z0-9_-]+)/i);
+                if (matchCell) cellIdRaw = cleanText(matchCell[1]);
+            }
+
+            let statusRaw = extractBlock('Status', text);
+            let isFailed = /fail|❌|gagal|\bNG\b/i.test(statusRaw);
+            let status = isFailed ? 'F' : 'Y';
+
+            let reason = '';
+            let detailReason = '';
+
+            if (isFailed) {
+                let matchDetail = statusRaw.match(/\((.*?)\)/);
+                if (matchDetail) {
+                    detailReason = matchDetail[1].trim();
+                } else {
+                    detailReason = statusRaw.replace(/fail(ed)?|❌|gagal|status|[:=]/gi, '').trim();
+                }
+                reason = matchReasonFailed(detailReason, text);
+            }
+
+            let picRaw = extractBlock('PIC', text);
+            let pic = picRaw
+                .replace(/\s*(?:,|\/|\bdan\b|\band\b)\s*/gi, ' & ')
+                .replace(/\s*&\s*/g, ' & ')
+                .replace(/\s+/g, ' ')
+                .trim();
+
+            let lotId = '';
+
+            let cellIds = cellIdRaw
+                .split(/[,;\n&]+|\b(?:dan|and)\b/i)
+                .map(id => id.trim())
+                .filter(id => id.length > 0);
+            
+            if (cellIds.length === 0) cellIds = [''];
+
+            let results = cellIds.map(cellId => {
+                let pkgId = (section === 'EL') ? cellId : '';
+                let stkId = (section === 'TW' || section === 'CA') ? cellId : '';
+                return `${line}\t${section}\t${ngName}\t${lotId}\t${pkgId}\t${stkId}\t${status}\t${reason}\t${detailReason}\t${pic}`;
+            });
+
+            return results.join('\n');
+        }
+
+        function processFormat() {
+            const inputEl = document.getElementById('inputText');
+            const outputEl = document.getElementById('outputText');
+            
+            let input = inputEl ? inputEl.value.trim() : '';
+            if (!input) {
+                if (outputEl) outputEl.value = '';
+                return;
+            }
+
+            let output = '';
+            if (currentMode === 'downtime') {
+                output = formatDowntime(input);
+            } else if (currentMode === 'excel') {
+                output = formatExcel(input);
+            } else if (currentMode === 'naming') {
+                output = formatVisionNaming(input);
+            } else if (currentMode === 'rework') {
+                output = formatRework(input);
+            }
+
+            if (outputEl) outputEl.value = output;
+        }
+
+        function copyOutput() {
+            const outputEl = document.getElementById('outputText');
+            if (!outputEl || !outputEl.value) return;
+            
+            outputEl.select();
+            navigator.clipboard.writeText(outputEl.value).then(() => {
+                const toast = document.getElementById('toast');
+                if (toast) {
+                    toast.style.display = 'block';
+                    setTimeout(() => { 
+                        toast.style.display = 'none'; 
+                    }, 2000);
+                }
+            });
+        }
+
+        function clearAll() {
+            const inputEl = document.getElementById('inputText');
+            const outputEl = document.getElementById('outputText');
+            if (inputEl) inputEl.value = '';
+            if (outputEl) outputEl.value = '';
+        }
+    </script>
+</body>
+</html>
