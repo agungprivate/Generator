@@ -434,89 +434,93 @@ function formatVisionNaming(text) {
     return `${line}_${jam}_${lotId}_${pouchLot}_${status}`;
 }
 
-        // FUNGSI KLASIFIKASI NG NAME (REWORK)
-        function matchKlasifikasiNG(fullText, ngRaw) {
-            let ng_lower = (ngRaw || '').toLowerCase();
-            let full_lower = (fullText || '').toLowerCase();
-            
-            let sign = '-';
-            if (ng_lower.includes('(+)') || ng_lower.includes('plus') || full_lower.includes('(+)') || full_lower.includes('plus')) {
-                sign = '+';
-            } else if (ng_lower.includes('(-)') || ng_lower.includes('minus') || full_lower.includes('(-)') || full_lower.includes('minus')) {
-                sign = '-';
-            }
+    // FUNGSI KLASIFIKASI NG NAME (REWORK)
+function matchKlasifikasiNG(fullText, ngRaw) {
+    let ng_lower = (ngRaw || '').toLowerCase();
+    let full_lower = (fullText || '').toLowerCase();
+    
+    // Deteksi tanda (+) atau (-)
+    let sign = '-';
+    if (ng_lower.includes('(+)') || ng_lower.includes('plus') || full_lower.includes('(+)') || full_lower.includes('plus')) {
+        sign = '+';
+    } else if (ng_lower.includes('(-)') || ng_lower.includes('minus') || full_lower.includes('(-)') || full_lower.includes('minus')) {
+        sign = '-';
+    }
 
-            // --- 1. SECTION EL ---
-            if (ng_lower.includes('weight after') || ng_lower.includes('after e/f') || ng_lower.includes('after ef')) {
-                return 'Weight After E/F';
-            }
-            if (ng_lower.includes('weight before') || ng_lower.includes('before e/f') || ng_lower.includes('before ef')) {
-                return 'Weight Before E/F';
-            }
-            if (ng_lower.includes('ir bcr') || ng_lower.includes('barcode read') || ng_lower.includes('read ng') || ng_lower.includes('bcr ng')) {
-                return 'Barcode Read NG';
-            }
-            if (ng_lower.includes('it validation') || ng_lower.includes('barcode it')) {
-                return 'Barcode IT Validation';
-            }
-            if (ng_lower.includes('verify ng') || ng_lower.includes('barcode verify')) {
-                return 'Barcode Verify NG';
-            }
-            if (ng_lower.includes('ir contact')) {
-                return 'IR Contact';
-            }
-            if (/ (ir\s*lc|lc) /i.test(ng_lower) || ng_lower.includes('lead contact')) {
-                return 'Lead Contact';
-            }
-            if (ng_lower.includes('v sealing') || ng_lower.includes('v-sealing') || ng_lower.includes('vsealing')) {
-                return 'V Sealing';
-            }
+    // --- 1. SECTION EL ---
+    if (ng_lower.includes('weight after') || ng_lower.includes('after e/f') || ng_lower.includes('after ef')) {
+        return 'Weight After E/F';
+    }
+    if (ng_lower.includes('weight before') || ng_lower.includes('before e/f') || ng_lower.includes('before ef')) {
+        return 'Weight Before E/F';
+    }
+    if (ng_lower.includes('ir bcr') || ng_lower.includes('barcode read') || ng_lower.includes('read ng') || ng_lower.includes('bcr ng')) {
+        return 'Barcode Read NG';
+    }
+    if (ng_lower.includes('it validation') || ng_lower.includes('barcode it')) {
+        return 'Barcode IT Validation';
+    }
+    if (ng_lower.includes('verify ng') || ng_lower.includes('barcode verify')) {
+        return 'Barcode Verify NG';
+    }
+    if (ng_lower.includes('ir contact')) {
+        return 'IR Contact';
+    }
+    if (/ (ir\s*lc|lc) /i.test(ng_lower) || ng_lower.includes('lead contact')) {
+        return 'Lead Contact';
+    }
+    if (ng_lower.includes('v sealing') || ng_lower.includes('v-sealing') || ng_lower.includes('vsealing')) {
+        return 'V Sealing';
+    }
 
-            // --- 2. SECTION CA ---
-            if (ng_lower.includes('sealing vision') || ng_lower.includes('sealing ng') || ng_lower.includes('sealing')) {
-                return 'Sealing Vision';
-            }
-            if (ng_lower.includes('lead vision') || ng_lower.includes('vision lead')) {
-                return 'Lead Vision';
-            }
+    // --- 2. SECTION CA ---
+    if (ng_lower.includes('lead pos') || ng_lower.includes('leadpos') || ng_lower.includes('lead position')) {
+        return 'Lead Pos';
+    }
+    if (ng_lower.includes('sealing vision') || ng_lower.includes('sealing ng') || ng_lower.includes('sealing')) {
+        return 'Sealing Vision';
+    }
+    if (ng_lower.includes('lead vision') || ng_lower.includes('vision lead')) {
+        return 'Lead Vision';
+    }
 
-            // --- 3. SECTION TW ---
-            if (ng_lower.includes('wrong tab') || ng_lower.includes('tab direction') || ng_lower.includes('wrong direction')) {
-                return 'Wrong Tab Direction';
-            }
-            if (ng_lower.includes('no lead') || ng_lower.includes('nolead')) {
-                return 'No Lead';
-            }
-            if (ng_lower.includes('short contact') || ng_lower.includes('short check') || ng_lower.includes('short')) {
-                return 'Short Contact';
-            }
-            if (ng_lower.includes('tab burr') || ng_lower.includes('burr')) {
-                return `Tab Burr (${sign})`;
-            }
-            if (ng_lower.includes('tab press') || ng_lower.includes('press')) {
-                return `Tab Press (${sign})`;
-            }
-            if (ng_lower.includes('main weld') || ng_lower.includes('mainweld') || ng_lower.includes('main_weld')) {
-                return `Main Weld (${sign})`;
-            }
-            if (ng_lower.includes('leadfilm') || ng_lower.includes('lead film') || ng_lower.includes('lead fim') || (ng_lower.includes('lead') && ng_lower.includes('film'))) {
-                return `Lead Film (${sign})`;
-            }
-            if (ng_lower.includes('sepa') || ng_lower.includes('separator')) {
-                return `Sepa (${sign})`;
-            }
-            if (ng_lower.includes('cpp tape') || ng_lower.includes('tape') || ng_lower.includes('cpp')) {
-                return `CPP Tape (${sign})`;
-            }
-            if (ng_lower.includes('gap')) {
-                return `GAP (${sign})`;
-            }
-            if (ng_lower.includes('dimension') || ng_lower.includes('overkill')) {
-                return `Dimension Overkill (${sign})`;
-            }
+    // --- 3. SECTION TW ---
+    if (ng_lower.includes('wrong tab') || ng_lower.includes('tab direction') || ng_lower.includes('wrong direction')) {
+        return 'Wrong Tab Direction';
+    }
+    if (ng_lower.includes('no lead') || ng_lower.includes('nolead')) {
+        return 'No Lead';
+    }
+    if (ng_lower.includes('short contact') || ng_lower.includes('short check') || ng_lower.includes('short')) {
+        return 'Short Contact';
+    }
+    if (ng_lower.includes('tab burr') || ng_lower.includes('burr')) {
+        return `Tab Burr (${sign})`;
+    }
+    if (ng_lower.includes('tab press') || ng_lower.includes('press')) {
+        return `Tab Press (${sign})`;
+    }
+    if (ng_lower.includes('main weld') || ng_lower.includes('mainweld') || ng_lower.includes('main_weld')) {
+        return `Main Weld (${sign})`;
+    }
+    if (ng_lower.includes('leadfilm') || ng_lower.includes('lead film') || ng_lower.includes('lead fim') || (ng_lower.includes('lead') && ng_lower.includes('film'))) {
+        return `Lead Film (${sign})`;
+    }
+    if (ng_lower.includes('sepa') || ng_lower.includes('separator')) {
+        return `Sepa (${sign})`;
+    }
+    if (ng_lower.includes('cpp tape') || ng_lower.includes('tape') || ng_lower.includes('cpp')) {
+        return `CPP Tape (${sign})`;
+    }
+    if (ng_lower.includes('gap')) {
+        return `GAP (${sign})`;
+    }
+    if (ng_lower.includes('dimension') || ng_lower.includes('overkill')) {
+        return `Dimension Overkill (${sign})`;
+    }
 
-            return ngRaw;
-        }
+    return ngRaw;
+}
 
         // FUNGSI KLASIFIKASI REASON FAILED (REWORK)
         function matchReasonFailed(detailReason, fullText) {
@@ -551,76 +555,76 @@ function formatVisionNaming(text) {
         }
 
         // 4. FORMAT REWORK
-        function formatRework(text) {
-            let lineMatch = text.match(/(?:#|Line|PKG)?\s*([0-9]+-[0-9]+)/i);
-            let line = lineMatch ? `PKG ${lineMatch[1]}` : '';
+function formatRework(text) {
+    let lineMatch = text.match(/(?:#|Line|PKG)?\s*([0-9]+-[0-9]+)/i);
+    let line = lineMatch ? `PKG ${lineMatch[1]}` : '';
 
-            let ngRaw = extractBlock('NG', text);
-            if (!ngRaw) {
-                let matchNg = text.match(/(?:^|\n)[\s*•_–.-]*NG\s*[:=–-]?\s*(.*)/i);
-                if (matchNg) ngRaw = cleanText(matchNg[1]);
-            }
-            let ngName = matchKlasifikasiNG(text, ngRaw);
+    let ngRaw = extractBlock('NG', text);
+    if (!ngRaw) {
+        let matchNg = text.match(/(?:^|\n)[\s*•_–.-]*NG\s*[:=–-]?\s*(.*)/i);
+        if (matchNg) ngRaw = cleanText(matchNg[1]);
+    }
+    let ngName = matchKlasifikasiNG(text, ngRaw);
 
-            let section = 'TW';
-            let lowerText = text.toLowerCase();
-            let lowerNg = (ngName || '').toLowerCase();
+    let section = 'TW';
+    let lowerText = text.toLowerCase();
+    let lowerNg = (ngName || '').toLowerCase();
 
-            if (lowerText.includes('cell assy') || lowerText.includes('ca') || lowerNg.includes('sealing vision') || lowerNg.includes('lead vision')) {
-                section = 'CA';
-            } else if (/\bEL\b|Filling/i.test(text) || lowerNg.includes('weight') || lowerNg.includes('barcode') || lowerNg.includes('ir contact') || lowerNg.includes('lead contact') || lowerNg.includes('v sealing')) {
-                section = 'EL';
-            } else {
-                section = 'TW';
-            }
+    if (lowerText.includes('cell assy') || lowerText.includes('ca') || lowerNg.includes('sealing vision') || lowerNg.includes('lead vision') || lowerNg.includes('lead pos')) {
+        section = 'CA';
+    } else if (/\bEL\b|Filling/i.test(text) || lowerNg.includes('weight') || lowerNg.includes('barcode') || lowerNg.includes('ir contact') || lowerNg.includes('lead contact') || lowerNg.includes('v sealing')) {
+        section = 'EL';
+    } else {
+        section = 'TW';
+    }
 
-            let cellIdRaw = extractBlock('Cell ID', text) || extractBlock('CellID', text) || extractBlock('Cell', text);
-            if (!cellIdRaw) {
-                let matchCell = text.match(/(?:Cell\s*ID|CellID)\s*[:=–-]?\s*([A-Za-z0-9_-]+)/i);
-                if (matchCell) cellIdRaw = cleanText(matchCell[1]);
-            }
+    let cellIdRaw = extractBlock('Cell ID', text) || extractBlock('CellID', text) || extractBlock('Cell', text);
+    if (!cellIdRaw) {
+        let matchCell = text.match(/(?:Cell\s*ID|CellID)\s*[:=–-]?\s*([A-Za-z0-9_-]+)/i);
+        if (matchCell) cellIdRaw = cleanText(matchCell[1]);
+    }
 
-            let statusRaw = extractBlock('Status', text);
-            let isFailed = /fail|❌|gagal|\bNG\b/i.test(statusRaw);
-            let status = isFailed ? 'F' : 'Y';
+    let statusRaw = extractBlock('Status', text);
+    let isFailed = /fail|❌|gagal|\bNG\b/i.test(statusRaw);
+    let status = isFailed ? 'F' : 'Y';
 
-            let reason = '';
-            let detailReason = '';
+    let reason = '';
+    let detailReason = '';
 
-            if (isFailed) {
-                let matchDetail = statusRaw.match(/\((.*?)\)/);
-                if (matchDetail) {
-                    detailReason = matchDetail[1].trim();
-                } else {
-                    detailReason = statusRaw.replace(/fail(ed)?|❌|gagal|status|[:=]/gi, '').trim();
-                }
-                reason = matchReasonFailed(detailReason, text);
-            }
-
-            let picRaw = extractBlock('PIC', text);
-            let pic = picRaw
-                .replace(/\s*(?:,|\/|\bdan\b|\band\b)\s*/gi, ' & ')
-                .replace(/\s*&\s*/g, ' & ')
-                .replace(/\s+/g, ' ')
-                .trim();
-
-            let lotId = '';
-
-            let cellIds = cellIdRaw
-                .split(/[,;\n&]+|\b(?:dan|and)\b/i)
-                .map(id => id.trim())
-                .filter(id => id.length > 0);
-            
-            if (cellIds.length === 0) cellIds = [''];
-
-            let results = cellIds.map(cellId => {
-                let pkgId = (section === 'EL') ? cellId : '';
-                let stkId = (section === 'TW' || section === 'CA') ? cellId : '';
-                return `${line}\t${section}\t${ngName}\t${lotId}\t${pkgId}\t${stkId}\t${status}\t${reason}\t${detailReason}\t${pic}`;
-            });
-
-            return results.join('\n');
+    if (isFailed) {
+        let matchDetail = statusRaw.match(/\((.*?)\)/);
+        if (matchDetail) {
+            detailReason = matchDetail[1].trim();
+        } else {
+            detailReason = statusRaw.replace(/fail(ed)?|❌|gagal|status|[:=]/gi, '').trim();
         }
+        reason = matchReasonFailed(detailReason, text);
+    }
+
+    let picRaw = extractBlock('PIC', text);
+    let pic = picRaw
+        .replace(/\s*(?:,|\/|\bdan\b|\band\b)\s*/gi, ' & ')
+        .replace(/\s*&\s*/g, ' & ')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+    let lotId = '';
+
+    let cellIds = cellIdRaw
+        .split(/[,;\n&]+|\b(?:dan|and)\b/i)
+        .map(id => id.trim())
+        .filter(id => id.length > 0);
+    
+    if (cellIds.length === 0) cellIds = [''];
+
+    let results = cellIds.map(cellId => {
+        let pkgId = (section === 'EL') ? cellId : '';
+        let stkId = (section === 'TW' || section === 'CA') ? cellId : '';
+        return `${line}\t${section}\t${ngName}\t${lotId}\t${pkgId}\t${stkId}\t${status}\t${reason}\t${detailReason}\t${pic}`;
+    });
+
+    return results.join('\n');
+}
 
         function showToast() {
             const toast = document.getElementById('toast');
