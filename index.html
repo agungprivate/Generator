@@ -407,30 +407,32 @@
         }
 
         // 3. FORMAT CRACK (VISION NAMING)
-        function formatVisionNaming(text) {
-            let lineMatch = text.match(/(?:Line|PKG)\s*[:=]?\s*([0-9]+-[0-9]+)/i);
-            let line = lineMatch ? lineMatch[1] : '';
+function formatVisionNaming(text) {
+    let lineMatch = text.match(/(?:Line|PKG)\s*[:=]?\s*([0-9]+-[0-9]+)/i);
+    let line = lineMatch ? lineMatch[1] : '';
 
-            let jamRaw = extractBlock('Jam', text) || extractBlock('Time', text);
-            let jam = jamRaw.replace(/[^0-9]/g, '');
+    let jamRaw = extractBlock('Jam', text) || extractBlock('Time', text);
+    let jam = jamRaw.replace(/[^0-9]/g, '');
 
-            let lotId = extractBlock('Lot ID', text);
-            let pouchLot = extractBlock('Pouch Lot', text) || extractBlock('Pouch ID', text);
+    let lotId = extractBlock('Lot ID', text);
+    let pouchLot = extractBlock('Pouch Lot', text) || extractBlock('Pouch ID', text);
 
-            let status = 'OVERKILL';
-            let lowerText = text.toLowerCase();
-            if (lowerText.includes('overkill')) {
-                status = 'OVERKILL';
-            } else if (lowerText.includes('pinhole')) {
-                status = 'PINHOLE';
-            } else if (lowerText.includes('crack')) {
-                status = 'CRACK';
-            } else if (lowerText.includes('ng')) {
-                status = 'NG';
-            }
+    let status = 'OVERKILL';
+    let lowerText = text.toLowerCase();
+    
+    // Utamakan PINHOLE dan CRACK sebelum fallback ke OVERKILL
+    if (lowerText.includes('pinhole') || lowerText.includes('pin hole')) {
+        status = 'PINHOLE';
+    } else if (lowerText.includes('crack')) {
+        status = 'CRACK';
+    } else if (lowerText.includes('overkill')) {
+        status = 'OVERKILL';
+    } else if (lowerText.includes('ng')) {
+        status = 'NG';
+    }
 
-            return `${line}_${jam}_${lotId}_${pouchLot}_${status}`;
-        }
+    return `${line}_${jam}_${lotId}_${pouchLot}_${status}`;
+}
 
         // FUNGSI KLASIFIKASI NG NAME (REWORK)
         function matchKlasifikasiNG(fullText, ngRaw) {
