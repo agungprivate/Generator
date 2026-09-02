@@ -434,16 +434,19 @@ function formatVisionNaming(text) {
     return `${line}_${jam}_${lotId}_${pouchLot}_${status}`;
 }
 
-    // FUNGSI KLASIFIKASI NG NAME (REWORK)
+ // FUNGSI KLASIFIKASI NG NAME (REWORK)
 function matchKlasifikasiNG(fullText, ngRaw) {
-    let ng_lower = (ngRaw || '').toLowerCase();
+    let raw = (ngRaw || '');
+    // Hilangkan keterangan overkill/ok dalam tanda kurung agar tidak salah deteksi
+    let cleanedNg = raw.replace(/\((overkill|ok|ng)\)/gi, '').trim();
+    let ng_lower = cleanedNg.toLowerCase();
     let full_lower = (fullText || '').toLowerCase();
     
     // Deteksi tanda (+) atau (-)
     let sign = '-';
-    if (ng_lower.includes('(+)') || ng_lower.includes('plus') || full_lower.includes('(+)') || full_lower.includes('plus')) {
+    if (raw.toLowerCase().includes('(+)') || raw.toLowerCase().includes('plus') || full_lower.includes('(+)') || full_lower.includes('plus')) {
         sign = '+';
-    } else if (ng_lower.includes('(-)') || ng_lower.includes('minus') || full_lower.includes('(-)') || full_lower.includes('minus')) {
+    } else if (raw.toLowerCase().includes('(-)') || raw.toLowerCase().includes('minus') || full_lower.includes('(-)') || full_lower.includes('minus')) {
         sign = '-';
     }
 
@@ -515,46 +518,14 @@ function matchKlasifikasiNG(fullText, ngRaw) {
     if (ng_lower.includes('gap')) {
         return `GAP (${sign})`;
     }
-    if (ng_lower.includes('dimension') || ng_lower.includes('overkill')) {
+    if (ng_lower.includes('dimension') || raw.toLowerCase().includes('overkill')) {
         return `Dimension Overkill (${sign})`;
     }
 
     return ngRaw;
 }
 
-        // FUNGSI KLASIFIKASI REASON FAILED (REWORK)
-        function matchReasonFailed(detailReason, fullText) {
-            let dr = (detailReason || '').toLowerCase();
-            let ft = (fullText || '').toLowerCase();
-
-            if (dr.includes('alignment')) {
-                return '[Cell Crash] Alignment';
-            }
-            if (dr.includes('tab cutter') || dr.includes('cutter')) {
-                return '[Lead Crash] Tab Cutter';
-            }
-            if (dr.includes('mask jig') || dr.includes('mask')) {
-                return '[Lead Crash] Mask Jig';
-            }
-            if (dr.includes('preweld') || dr.includes('pre welder') || dr.includes('pre-welder')) {
-                return '[Lead Crash] Pre Welder';
-            }
-            if (dr.includes('another ng') || dr.includes('be another')) {
-                return 'Be Another NG';
-            }
-            if (dr.includes('lot change')) {
-                return 'LOT Change';
-            }
-            if (dr.includes('2x input') || dr.includes('real ng') || dr.includes('2x')) {
-                return '[2X Input] Real NG';
-            }
-            if (dr.includes('raw material') || dr.includes('material ng')) {
-                return 'Raw Material NG';
-            }
-            return '';
-        }
-
-        // 4. FORMAT REWORK
+// 4. FORMAT REWORK
 function formatRework(text) {
     let lineMatch = text.match(/(?:#|Line|PKG)?\s*([0-9]+-[0-9]+)/i);
     let line = lineMatch ? `PKG ${lineMatch[1]}` : '';
@@ -570,7 +541,7 @@ function formatRework(text) {
     let lowerText = text.toLowerCase();
     let lowerNg = (ngName || '').toLowerCase();
 
-    if (lowerText.includes('cell assy') || lowerText.includes('ca') || lowerNg.includes('sealing vision') || lowerNg.includes('lead vision') || lowerNg.includes('lead pos')) {
+    if (lowerText.includes('cell assy') || lowerText.includes('ca') || lowerNg.includes('sealing vision') || lowerNg.includes('lead vision') || lowerNg.includes('lead pos') || lowerText.includes('lead vision')) {
         section = 'CA';
     } else if (/\bEL\b|Filling/i.test(text) || lowerNg.includes('weight') || lowerNg.includes('barcode') || lowerNg.includes('ir contact') || lowerNg.includes('lead contact') || lowerNg.includes('v sealing')) {
         section = 'EL';
