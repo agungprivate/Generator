@@ -455,7 +455,8 @@ function matchKlasifikasiNG(fullText, ngRaw) {
     }
 
     // --- 1. SECTION EL ---
-    if (ng_lower.includes('weight after') || ng_lower.includes('after e/f') || ng_lower.includes('after ef')) {
+    // --- 1. SECTION EL ---
+    if (ng_lower === 'aw' || /\baw\b/i.test(ng_lower) || ng_lower.includes('weight after') || ng_lower.includes('after e/f') || ng_lower.includes('after ef')) {
         return 'Weight After E/F';
     }
     if (ng_lower.includes('weight before') || ng_lower.includes('before e/f') || ng_lower.includes('before ef')) {
