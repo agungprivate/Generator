@@ -310,58 +310,62 @@
             return `${names.join(', ')} & ${last}`;
         }
 
-        // 1. FORMAT LOSSKEY
-        function formatDowntime(text) {
-            let section = extractBlock('Section', text);
-            let location = extractBlock('Location', text);
-            let problem = extractBlock('Problem', text);
-            let cause = extractBlock('Cause', text);
-            let pic = extractBlock('PIC', text);
-            let partReplacement = extractBlock('Part Replacement', text);
+     // 1. FORMAT LOSSKEY
+function formatDowntime(text) {
+    let section = extractBlock('Section', text);
+    let location = extractBlock('Location', text);
+    let problem = extractBlock('Problem', text);
+    let cause = extractBlock('Cause', text);
+    let pic = extractBlock('PIC', text);
 
-            let rawActions = [];
-            let lines = text.split('\n');
-            let isAction = false;
+    // Ambil Part Replacement murni tanpa terbawa baris PIC/Result/dll
+    let matchPart = text.match(/(?:^|\n)[\s*_-]*Part Replacement[\s*_-]*[:=–-]?\s*(.*?)(?=\s*(?:\n|\bPIC\b|\bResult\b|\bStatus\b|\/\/|$))/i);
+    let partReplacement = matchPart ? cleanText(matchPart[1]) : '';
 
-            for (let line of lines) {
-                let trimmed = line.trim();
-                if (/^[\s*_-]*(Countermeasure|Action)[\s*_-]*[:=]?/i.test(trimmed)) {
-                    isAction = true;
-                    let afterHeader = trimmed.replace(/^[\s*_-]*(Countermeasure|Action)[\s*_-]*[:=]?/i, '').trim();
-                    if (afterHeader.length > 0) {
-                        let clean = afterHeader.replace(/^(\d+[.)]|[-*•])\s*/, '').replace(/[*_]/g, '').trim();
-                        if (clean) rawActions.push(clean);
-                    }
-                    continue;
-                }
-                if (isAction) {
-                    if (/^[\s*_-]*(Result|Part Replacement|PIC|Qty Defect|Start Time|End Time|Duration|Stop Status|Status|Note|Risk Range)[\s*_-]*[:=]/i.test(trimmed)) {
-                        isAction = false;
-                        continue;
-                    }
-                    if (trimmed.length > 0) {
-                        let cleanAction = trimmed.replace(/^(\d+[.)]|[-*•])\s*/, '').replace(/[*_]/g, '').trim();
-                        if (cleanAction) rawActions.push(cleanAction);
-                    }
-                }
+    let rawActions = [];
+    let lines = text.split('\n');
+    let isAction = false;
+
+    for (let line of lines) {
+        let trimmed = line.trim();
+        if (/^[\s*_-]*(Countermeasure|Action)[\s*_-]*[:=]?/i.test(trimmed)) {
+            isAction = true;
+            let afterHeader = trimmed.replace(/^[\s*_-]*(Countermeasure|Action)[\s*_-]*[:=]?/i, '').trim();
+            if (afterHeader.length > 0) {
+                let clean = afterHeader.replace(/^(\d+[.)]|[-*•])\s*/, '').replace(/[*_]/g, '').trim();
+                if (clean) rawActions.push(clean);
             }
-
-            let formattedActions = rawActions.map((act, idx) => `${idx + 1}. ${act}`);
-
-            let result = `${section || 'Section'} // ${location || 'Location'} // ${problem || 'Problem'} //\n`;
-            if (cause && cause !== '-') {
-                result += `${cause} //\n`;
-            }
-            result += `Action :\n`;
-            result += (formattedActions.length > 0 ? formattedActions.join('\n') : '');
-            
-            if (partReplacement && partReplacement !== '-') {
-                result += `\n\nPart Replacement: ${partReplacement}`;
-            }
-            
-            result += `\n//\nPIC : ${pic || '-'}`;
-            return result;
+            continue;
         }
+        if (isAction) {
+            if (/^[\s*_-]*(Result|Part Replacement|PIC|Qty Defect|Start Time|End Time|Duration|Stop Status|Status|Note|Risk Range)[\s*_-]*[:=]/i.test(trimmed)) {
+                isAction = false;
+                continue;
+            }
+            if (trimmed.length > 0) {
+                let cleanAction = trimmed.replace(/^(\d+[.)]|[-*•])\s*/, '').replace(/[*_]/g, '').trim();
+                if (cleanAction) rawActions.push(cleanAction);
+            }
+        }
+    }
+
+    let formattedActions = rawActions.map((act, idx) => `${idx + 1}. ${act}`);
+
+    let result = `${section || 'Section'} // ${location || 'Location'} // ${problem || 'Problem'} //\n`;
+    if (cause && cause !== '-') {
+        result += `${cause} //\n`;
+    }
+    result += `Action :\n`;
+    result += (formattedActions.length > 0 ? formattedActions.join('\n') : '');
+    
+    // Hanya tampilkan Part Replacement jika benar-benar ada isinya
+    if (partReplacement && partReplacement !== '-' && !/^[:\s–-]+$/.test(partReplacement)) {
+        result += `\n\nPart Replacement: ${partReplacement}`;
+    }
+    
+    result += `\n//\nPIC : ${pic || '-'}`;
+    return result;
+}
 
         // 2. FORMAT WRINKLE
         function formatExcel(text) {
