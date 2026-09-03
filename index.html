@@ -482,8 +482,8 @@ function matchKlasifikasiNG(fullText, ngRaw) {
     }
 
     // --- 2. SECTION CA ---
-    if (ng_lower.includes('lead pos') || ng_lower.includes('leadpos') || ng_lower.includes('lead position')) {
-        return 'Lead Pos';
+    if (ng_lower.includes('lead pos') || ng_lower.includes('leadpos') || ng_lower.includes('lead position') || ng_lower.includes('lead vision') || ng_lower.includes('vision lead')) {
+        return 'Lead Vision';
     }
     if (ng_lower.includes('sealing vision') || ng_lower.includes('sealing ng') || ng_lower.includes('sealing')) {
         return 'Sealing Vision';
@@ -546,7 +546,7 @@ function formatRework(text) {
     let lowerText = text.toLowerCase();
     let lowerNg = (ngName || '').toLowerCase();
 
-    if (lowerText.includes('cell assy') || lowerText.includes('ca') || lowerNg.includes('sealing vision') || lowerNg.includes('lead vision') || lowerNg.includes('lead pos') || lowerText.includes('lead vision')) {
+    if (lowerText.includes('cell assy') || lowerText.includes('ca') || lowerNg.includes('sealing vision') || lowerNg.includes('lead vision') || lowerText.includes('lead vision')) {
         section = 'CA';
     } else if (/\bEL\b|Filling/i.test(text) || lowerNg.includes('weight') || lowerNg.includes('barcode') || lowerNg.includes('ir contact') || lowerNg.includes('lead contact') || lowerNg.includes('v sealing')) {
         section = 'EL';
