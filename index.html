@@ -563,15 +563,15 @@ function formatRework(text) {
     let reason = '';
     let detailReason = '';
 
-    if (isFailed) {
-        // Ambil isi keterangan setelah kata Failed/Gagal tanpa error tanda kurung
+   if (isFailed) {
+        // Ambil isi keterangan setelah kata Failed/Gagal tanpa mengisi kolom reason
         let matchDetail = statusRaw.match(/^[^(]*\((.*)\)[^)]*$/);
         if (matchDetail) {
             detailReason = matchDetail[1].trim();
         } else {
             detailReason = statusRaw.replace(/fail(ed)?|❌|gagal|status|[:=]/gi, '').trim();
         }
-        reason = typeof matchReasonFailed === 'function' ? matchReasonFailed(detailReason, text) : detailReason;
+        reason = ''; // Kolom reason dikosongkan
     }
 
     let picRaw = extractBlock('PIC', text);
