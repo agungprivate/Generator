@@ -267,10 +267,13 @@
         }
     });
 
-    // Menghapus kedua kolom (Input Data dan Hasil Format)
+    // Menghapus isi kolom dan otomatis arahkan kursor ke input
     const inputEl = document.getElementById('inputText');
     const outputEl = document.getElementById('outputText');
-    if (inputEl) inputEl.value = '';
+    if (inputEl) {
+        inputEl.value = '';
+        inputEl.focus();
+    }
     if (outputEl) outputEl.value = '';
 }
 
