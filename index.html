@@ -647,42 +647,49 @@ function formatRework(text) {
             }
         }
 
-        // FITUR AUTO-DETECT MODE SAAT INPUT / PASTE
+// FITUR AUTO-DETECT MODE SAAT INPUT / PASTE
 function autoDetectMode(text) {
-    if (!text || text.trim().length < 5) return;
+    if (!text || text.trim().length < 4) return;
     
-    let lower = text.toLowerCase();
+    // Bersihkan karakter spasi tak kasat mata bawaan copy-paste
+    let clean = text.replace(/\u00A0/g, ' ');
+    let lower = clean.toLowerCase();
 
-    // 1. Prioritas Rework: Ciri khas ada Cell ID atau NG
-    if (lower.includes('cell id') || lower.includes('cellid') || /(?:^|\n)\s*[-*•]?\s*ng\s*[:=]/i.test(text)) {
-        if (currentMode !== 'rework') setMode('rework');
+    // 1. Prioritas Rework: Ada Cell ID atau baris NG
+    if (lower.includes('cell id') || lower.includes('cellid') || /(?:^|\n)[^\w\n]*ng\s*[:=–-]/i.test(clean)) {
+        if (currentMode !== 'rework') setMode('rework', true);
         return;
     }
 
     // 2. Prioritas Crack: Ada indikator crack, pinhole, atau lot id vision
     if (lower.includes('crack') || lower.includes('pinhole') || (lower.includes('lot id') && lower.includes('pouch lot'))) {
-        if (currentMode !== 'naming') setMode('naming');
+        if (currentMode !== 'naming') setMode('naming', true);
         return;
     }
 
     // 3. Prioritas Wrinkle: Ada Pouch ID / Pouch Lot bersamaan dengan Count atau Time
-    if (lower.includes('count') || lower.includes('pouch id') || (lower.includes('pouch lot') && !lower.includes('lot id'))) {
-        if (currentMode !== 'excel') setMode('excel');
+    if (lower.includes('count') || (lower.includes('pouch') && (lower.includes('jam') || lower.includes('time') || /\b\d{1,2}[.:]\d{2}\b/.test(clean)))) {
+        if (currentMode !== 'excel') setMode('excel', true);
         return;
     }
 
-    // 4. Prioritas Losskey (Downtime): Ada Action, Countermeasure, Cause, atau Part Replacement
-    if (lower.includes('countermeasure') || lower.includes('action :') || lower.includes('part replacement') || lower.includes('cause')) {
-        if (currentMode !== 'downtime') setMode('downtime');
+    // 4. Prioritas Losskey (Downtime): Ada Action, Countermeasure, Problem, Cause, atau Part Replacement
+    if (lower.includes('countermeasure') || lower.includes('action') || lower.includes('part replacement') || lower.includes('cause') || lower.includes('problem')) {
+        if (currentMode !== 'downtime') setMode('downtime', true);
         return;
     }
 }
 
-// Pasang pendengar event saat paste atau ketik di inputText
+// Pasang pendengar event saat paste dan input di inputText
 const inputArea = document.getElementById('inputText');
 if (inputArea) {
     inputArea.addEventListener('input', function(e) {
         autoDetectMode(e.target.value);
+    });
+    inputArea.addEventListener('paste', function(e) {
+        // Ambil teks clipboard langsung sesaat sebelum masuk ke textarea
+        let pastedData = (e.clipboardData || window.clipboardData).getData('text');
+        autoDetectMode(pastedData);
     });
 }
     </script>
