@@ -246,7 +246,7 @@
     <script>
         let currentMode = 'downtime';
 
-       function setMode(mode) {
+       function setMode(mode, keepInput = false) {
     currentMode = mode;
     
     const tabButtons = [
@@ -267,10 +267,12 @@
         }
     });
 
-    // Menghapus isi kolom dan otomatis arahkan kursor ke input
     const inputEl = document.getElementById('inputText');
     const outputEl = document.getElementById('outputText');
-    if (inputEl) {
+    
+    // Kalau diklik manual (keepInput = false), hapus input & fokus kursor
+    // Kalau auto detect (keepInput = true), jangan hapus teks yang baru dipaste
+    if (!keepInput && inputEl) {
         inputEl.value = '';
         inputEl.focus();
     }
@@ -644,6 +646,45 @@ function formatRework(text) {
                 });
             }
         }
+
+        // FITUR AUTO-DETECT MODE SAAT INPUT / PASTE
+function autoDetectMode(text) {
+    if (!text || text.trim().length < 5) return;
+    
+    let lower = text.toLowerCase();
+
+    // 1. Prioritas Rework: Ciri khas ada Cell ID atau NG
+    if (lower.includes('cell id') || lower.includes('cellid') || /(?:^|\n)\s*[-*•]?\s*ng\s*[:=]/i.test(text)) {
+        if (currentMode !== 'rework') setMode('rework');
+        return;
+    }
+
+    // 2. Prioritas Crack: Ada indikator crack, pinhole, atau lot id vision
+    if (lower.includes('crack') || lower.includes('pinhole') || (lower.includes('lot id') && lower.includes('pouch lot'))) {
+        if (currentMode !== 'naming') setMode('naming');
+        return;
+    }
+
+    // 3. Prioritas Wrinkle: Ada Pouch ID / Pouch Lot bersamaan dengan Count atau Time
+    if (lower.includes('count') || lower.includes('pouch id') || (lower.includes('pouch lot') && !lower.includes('lot id'))) {
+        if (currentMode !== 'excel') setMode('excel');
+        return;
+    }
+
+    // 4. Prioritas Losskey (Downtime): Ada Action, Countermeasure, Cause, atau Part Replacement
+    if (lower.includes('countermeasure') || lower.includes('action :') || lower.includes('part replacement') || lower.includes('cause')) {
+        if (currentMode !== 'downtime') setMode('downtime');
+        return;
+    }
+}
+
+// Pasang pendengar event saat paste atau ketik di inputText
+const inputArea = document.getElementById('inputText');
+if (inputArea) {
+    inputArea.addEventListener('input', function(e) {
+        autoDetectMode(e.target.value);
+    });
+}
     </script>
 </body>
 </html>
