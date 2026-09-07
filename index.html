@@ -72,7 +72,7 @@
         .mode-selector {
             display: flex;
             gap: 8px;
-            margin-bottom: 24px;
+            margin-bottom: 12px;
             justify-content: center;
             flex-wrap: wrap;
         }
@@ -99,6 +99,43 @@
             color: #ffffff;
             border-color: var(--primary);
             box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+        }
+
+        /* SUB-TABS (CRACK) */
+        .sub-mode-selector {
+            display: none;
+            gap: 6px;
+            margin-bottom: 20px;
+            justify-content: center;
+            align-items: center;
+            background: #f1f5f9;
+            padding: 6px;
+            border-radius: 10px;
+            width: fit-content;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .btn-sub-mode {
+            padding: 6px 14px;
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 12px;
+        }
+
+        .btn-sub-mode:hover {
+            color: var(--text-main);
+        }
+
+        .btn-sub-mode.active {
+            background: #ffffff;
+            color: var(--primary);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
         }
 
         /* GRID */
@@ -221,8 +258,14 @@
         <div class="mode-selector">
             <button class="btn-mode active" id="btnMode1" type="button" onclick="setMode('downtime')">Losskey</button>
             <button class="btn-mode" id="btnMode2" type="button" onclick="setMode('excel')">Wrinkle</button>
-            <button class="btn-mode" id="btnMode3" type="button" onclick="setMode('naming')">Crack</button>
+            <button class="btn-mode" id="btnMode3" type="button" onclick="setMode('crack')">Crack</button>
             <button class="btn-mode" id="btnMode4" type="button" onclick="setMode('rework')">Rework</button>
+        </div>
+
+        <!-- SUB-TAB CRACK -->
+        <div class="sub-mode-selector" id="crackSubTabs">
+            <button class="btn-sub-mode active" id="btnCrackImage" type="button" onclick="setCrackSubMode('image')">📷 Image (Naming)</button>
+            <button class="btn-sub-mode" id="btnCrackExcel" type="button" onclick="setCrackSubMode('excel')">📊 Excel</button>
         </div>
 
         <div class="grid">
@@ -245,39 +288,67 @@
 
     <script>
         let currentMode = 'downtime';
+        let crackSubMode = 'image';
 
-       function setMode(mode, keepInput = false) {
-    currentMode = mode;
-    
-    const tabButtons = [
-        { id: 'btnMode1', key: 'downtime' },
-        { id: 'btnMode2', key: 'excel' },
-        { id: 'btnMode3', key: 'naming' },
-        { id: 'btnMode4', key: 'rework' }
-    ];
+        function setCrackSubMode(subMode, keepInput = false) {
+            crackSubMode = subMode;
 
-    tabButtons.forEach(tab => {
-        const el = document.getElementById(tab.id);
-        if (el) {
-            if (tab.key === mode) {
-                el.classList.add('active');
+            const btnImg = document.getElementById('btnCrackImage');
+            const btnXls = document.getElementById('btnCrackExcel');
+
+            if (subMode === 'image') {
+                btnImg.classList.add('active');
+                btnXls.classList.remove('active');
             } else {
-                el.classList.remove('active');
+                btnXls.classList.add('active');
+                btnImg.classList.remove('active');
             }
-        }
-    });
 
-    const inputEl = document.getElementById('inputText');
-    const outputEl = document.getElementById('outputText');
-    
-    // Kalau diklik manual (keepInput = false), hapus input & fokus kursor
-    // Kalau auto detect (keepInput = true), jangan hapus teks yang baru dipaste
-    if (!keepInput && inputEl) {
-        inputEl.value = '';
-        inputEl.focus();
-    }
-    if (outputEl) outputEl.value = '';
-}
+            const inputEl = document.getElementById('inputText');
+            const outputEl = document.getElementById('outputText');
+            if (!keepInput && inputEl) {
+                inputEl.value = '';
+                inputEl.focus();
+            }
+            if (outputEl) outputEl.value = '';
+        }
+
+        function setMode(mode, keepInput = false) {
+            currentMode = mode;
+            
+            const tabButtons = [
+                { id: 'btnMode1', key: 'downtime' },
+                { id: 'btnMode2', key: 'excel' },
+                { id: 'btnMode3', key: 'crack' },
+                { id: 'btnMode4', key: 'rework' }
+            ];
+
+            tabButtons.forEach(tab => {
+                const el = document.getElementById(tab.id);
+                if (el) {
+                    if (tab.key === mode) {
+                        el.classList.add('active');
+                    } else {
+                        el.classList.remove('active');
+                    }
+                }
+            });
+
+            // Tampilkan/sembunyikan sub-tab Crack
+            const subTabs = document.getElementById('crackSubTabs');
+            if (subTabs) {
+                subTabs.style.display = (mode === 'crack') ? 'flex' : 'none';
+            }
+
+            const inputEl = document.getElementById('inputText');
+            const outputEl = document.getElementById('outputText');
+            
+            if (!keepInput && inputEl) {
+                inputEl.value = '';
+                inputEl.focus();
+            }
+            if (outputEl) outputEl.value = '';
+        }
 
         function cleanText(str) {
             if (!str) return '';
@@ -315,62 +386,60 @@
             return `${names.join(', ')} & ${last}`;
         }
 
-     // 1. FORMAT LOSSKEY
-function formatDowntime(text) {
-    let section = extractBlock('Section', text);
-    let location = extractBlock('Location', text);
-    let problem = extractBlock('Problem', text);
-    let cause = extractBlock('Cause', text);
-    let pic = extractBlock('PIC', text);
+        // 1. FORMAT LOSSKEY
+        function formatDowntime(text) {
+            let section = extractBlock('Section', text);
+            let location = extractBlock('Location', text);
+            let problem = extractBlock('Problem', text);
+            let cause = extractBlock('Cause', text);
+            let pic = extractBlock('PIC', text);
 
-    // Ambil Part Replacement murni tanpa terbawa baris PIC/Result/dll
-    let matchPart = text.match(/(?:^|\n)[\s*_-]*Part Replacement[\s*_-]*[:=–-]?\s*(.*?)(?=\s*(?:\n|\bPIC\b|\bResult\b|\bStatus\b|\/\/|$))/i);
-    let partReplacement = matchPart ? cleanText(matchPart[1]) : '';
+            let matchPart = text.match(/(?:^|\n)[\s*_-]*Part Replacement[\s*_-]*[:=–-]?\s*(.*?)(?=\s*(?:\n|\bPIC\b|\bResult\b|\bStatus\b|\/\/|$))/i);
+            let partReplacement = matchPart ? cleanText(matchPart[1]) : '';
 
-    let rawActions = [];
-    let lines = text.split('\n');
-    let isAction = false;
+            let rawActions = [];
+            let lines = text.split('\n');
+            let isAction = false;
 
-    for (let line of lines) {
-        let trimmed = line.trim();
-        if (/^[\s*_-]*(Countermeasure|Action)[\s*_-]*[:=]?/i.test(trimmed)) {
-            isAction = true;
-            let afterHeader = trimmed.replace(/^[\s*_-]*(Countermeasure|Action)[\s*_-]*[:=]?/i, '').trim();
-            if (afterHeader.length > 0) {
-                let clean = afterHeader.replace(/^(\d+[.)]|[-*•])\s*/, '').replace(/[*_]/g, '').trim();
-                if (clean) rawActions.push(clean);
+            for (let line of lines) {
+                let trimmed = line.trim();
+                if (/^[\s*_-]*(Countermeasure|Action)[\s*_-]*[:=]?/i.test(trimmed)) {
+                    isAction = true;
+                    let afterHeader = trimmed.replace(/^[\s*_-]*(Countermeasure|Action)[\s*_-]*[:=]?/i, '').trim();
+                    if (afterHeader.length > 0) {
+                        let clean = afterHeader.replace(/^(\d+[.)]|[-*•])\s*/, '').replace(/[*_]/g, '').trim();
+                        if (clean) rawActions.push(clean);
+                    }
+                    continue;
+                }
+                if (isAction) {
+                    if (/^[\s*_-]*(Result|Part Replacement|PIC|Qty Defect|Start Time|End Time|Duration|Stop Status|Status|Note|Risk Range)[\s*_-]*[:=]/i.test(trimmed)) {
+                        isAction = false;
+                        continue;
+                    }
+                    if (trimmed.length > 0) {
+                        let cleanAction = trimmed.replace(/^(\d+[.)]|[-*•])\s*/, '').replace(/[*_]/g, '').trim();
+                        if (cleanAction) rawActions.push(cleanAction);
+                    }
+                }
             }
-            continue;
+
+            let formattedActions = rawActions.map((act, idx) => `${idx + 1}. ${act}`);
+
+            let result = `${section || 'Section'} // ${location || 'Location'} // ${problem || 'Problem'} //\n`;
+            if (cause && cause !== '-') {
+                result += `${cause} //\n`;
+            }
+            result += `Action :\n`;
+            result += (formattedActions.length > 0 ? formattedActions.join('\n') : '');
+            
+            if (partReplacement && partReplacement !== '-' && !/^[:\s–-]+$/.test(partReplacement)) {
+                result += `\n\nPart Replacement: ${partReplacement}`;
+            }
+            
+            result += `\n//\nPIC : ${pic || '-'}`;
+            return result;
         }
-        if (isAction) {
-            if (/^[\s*_-]*(Result|Part Replacement|PIC|Qty Defect|Start Time|End Time|Duration|Stop Status|Status|Note|Risk Range)[\s*_-]*[:=]/i.test(trimmed)) {
-                isAction = false;
-                continue;
-            }
-            if (trimmed.length > 0) {
-                let cleanAction = trimmed.replace(/^(\d+[.)]|[-*•])\s*/, '').replace(/[*_]/g, '').trim();
-                if (cleanAction) rawActions.push(cleanAction);
-            }
-        }
-    }
-
-    let formattedActions = rawActions.map((act, idx) => `${idx + 1}. ${act}`);
-
-    let result = `${section || 'Section'} // ${location || 'Location'} // ${problem || 'Problem'} //\n`;
-    if (cause && cause !== '-') {
-        result += `${cause} //\n`;
-    }
-    result += `Action :\n`;
-    result += (formattedActions.length > 0 ? formattedActions.join('\n') : '');
-    
-    // Hanya tampilkan Part Replacement jika benar-benar ada isinya
-    if (partReplacement && partReplacement !== '-' && !/^[:\s–-]+$/.test(partReplacement)) {
-        result += `\n\nPart Replacement: ${partReplacement}`;
-    }
-    
-    result += `\n//\nPIC : ${pic || '-'}`;
-    return result;
-}
 
         // 2. FORMAT WRINKLE
         function formatExcel(text) {
@@ -415,194 +484,216 @@ function formatDowntime(text) {
             return rows.join('\n');
         }
 
-        // 3. FORMAT CRACK (VISION NAMING)
-function formatVisionNaming(text) {
-    let lineMatch = text.match(/(?:Line|PKG)\s*[:=]?\s*([0-9]+-[0-9]+)/i);
-    let line = lineMatch ? lineMatch[1] : '';
+        // 3.A FORMAT CRACK - IMAGE (NAMING)
+        function formatVisionNaming(text) {
+            let lineMatch = text.match(/(?:Line|PKG)\s*[:=]?\s*([0-9]+-[0-9]+)/i);
+            let line = lineMatch ? lineMatch[1] : '';
 
-    let jamRaw = extractBlock('Jam', text) || extractBlock('Time', text);
-    let jam = jamRaw.replace(/[^0-9]/g, '');
+            let jamRaw = extractBlock('Jam', text) || extractBlock('Time', text);
+            let jam = jamRaw.replace(/[^0-9]/g, '');
 
-    let lotId = extractBlock('Lot ID', text);
-    let pouchLot = extractBlock('Pouch Lot', text) || extractBlock('Pouch ID', text);
+            let lotId = extractBlock('Lot ID', text) || extractBlock('LotID', text);
+            let pouchLot = extractBlock('Pouch Lot', text) || extractBlock('Pouch ID', text);
 
-    let status = 'OVERKILL';
-    let lowerText = text.toLowerCase();
-    
-    // Utamakan PINHOLE dan CRACK sebelum fallback ke OVERKILL
-    if (lowerText.includes('pinhole') || lowerText.includes('pin hole')) {
-        status = 'PINHOLE';
-    } else if (lowerText.includes('crack')) {
-        status = 'CRACK';
-    } else if (lowerText.includes('overkill')) {
-        status = 'OVERKILL';
-    } else if (lowerText.includes('ng')) {
-        status = 'NG';
-    }
+            let status = 'OVERKILL';
+            let lowerText = text.toLowerCase();
+            
+            if (lowerText.includes('pinhole') || lowerText.includes('pin hole')) {
+                status = 'PINHOLE';
+            } else if (lowerText.includes('crack')) {
+                status = 'CRACK';
+            } else if (lowerText.includes('overkill')) {
+                status = 'OVERKILL';
+            } else if (lowerText.includes('ng')) {
+                status = 'NG';
+            }
 
-    return `${line}_${jam}_${lotId}_${pouchLot}_${status}`;
-}
-
-// FUNGSI KLASIFIKASI NG NAME (REWORK)
-function matchKlasifikasiNG(fullText, ngRaw) {
-    let raw = (ngRaw || '');
-    let cleanedNg = raw.replace(/\((.*?)\)/gi, '').trim();
-    let ng_lower = cleanedNg.toLowerCase();
-    
-    // Deteksi tanda (+) atau (-) HANYA dari baris NG atau nama stasiun
-    let sign = '-';
-    let targetForSign = (raw + ' ' + (fullText.split('\n')[3] || '')).toLowerCase();
-    if (targetForSign.includes('(+)') || targetForSign.includes('plus')) {
-        sign = '+';
-    } else if (targetForSign.includes('(-)') || targetForSign.includes('minus')) {
-        sign = '-';
-    }
-
-    // --- 1. SECTION EL ---
-    if (ng_lower === 'aw' || /\baw\b/i.test(ng_lower) || ng_lower.includes('weight after') || ng_lower.includes('after e/f') || ng_lower.includes('after ef')) {
-        return 'Weight After E/F';
-    }
-    if (ng_lower.includes('weight before') || ng_lower.includes('before e/f') || ng_lower.includes('before ef')) {
-        return 'Weight Before E/F';
-    }
-    if (ng_lower.includes('ir bcr') || ng_lower.includes('barcode read') || ng_lower.includes('read ng') || ng_lower.includes('bcr ng')) {
-        return 'Barcode Read NG';
-    }
-    if (ng_lower.includes('it validation') || ng_lower.includes('barcode it')) {
-        return 'Barcode IT Validation';
-    }
-    if (ng_lower.includes('verify ng') || ng_lower.includes('barcode verify')) {
-        return 'Barcode Verify NG';
-    }
-    if (ng_lower.includes('ir contact')) {
-        return 'IR Contact';
-    }
-    if (/ (ir\s*lc|lc) /i.test(ng_lower) || ng_lower.includes('lead contact')) {
-        return 'Lead Contact';
-    }
-    if (ng_lower.includes('v sealing') || ng_lower.includes('v-sealing') || ng_lower.includes('vsealing')) {
-        return 'V Sealing';
-    }
-
-    // --- 2. SECTION CA ---
-    if (ng_lower.includes('lead pos') || ng_lower.includes('leadpos') || ng_lower.includes('lead position') || ng_lower.includes('lead vision') || ng_lower.includes('vision lead')) {
-        return 'Lead Vision';
-    }
-    if (ng_lower.includes('sealing vision') || ng_lower.includes('sealing ng') || ng_lower.includes('sealing')) {
-        return 'Sealing Vision';
-    }
-
-    // --- 3. SECTION TW ---
-    if (ng_lower.includes('wrong tab') || ng_lower.includes('tab direction') || ng_lower.includes('wrong direction')) {
-        return 'Wrong Tab Direction';
-    }
-    if (ng_lower.includes('no lead') || ng_lower.includes('nolead')) {
-        return 'No Lead';
-    }
-    if (ng_lower.includes('short contact') || ng_lower.includes('short check') || ng_lower.includes('short')) {
-        return 'Short Contact';
-    }
-    if (ng_lower.includes('tab burr') || ng_lower.includes('burr')) {
-        return `Tab Burr (${sign})`;
-    }
-    if (ng_lower.includes('tab press') || ng_lower.includes('press')) {
-        return `Tab Press (${sign})`;
-    }
-    if (ng_lower.includes('main weld') || ng_lower.includes('mainweld') || ng_lower.includes('main_weld')) {
-        return `Main Weld (${sign})`;
-    }
-    // Mendukung LeadFilm, LeadFilm1, LeadFilm2, dst.
-    if (/lead\s*fi?lm\d*/i.test(ng_lower) || (ng_lower.includes('lead') && ng_lower.includes('film'))) {
-        return `Lead Film (${sign})`;
-    }
-    if (ng_lower.includes('sepa') || ng_lower.includes('separator')) {
-        return `Sepa (${sign})`;
-    }
-    if (ng_lower.includes('cpp tape') || ng_lower.includes('tape') || ng_lower.includes('cpp')) {
-        return `CPP Tape (${sign})`;
-    }
-    if (ng_lower.includes('gap')) {
-        return `GAP (${sign})`;
-    }
-    if (ng_lower.includes('dimension') || raw.toLowerCase().includes('overkill')) {
-        return `Dimension Overkill (${sign})`;
-    }
-
-    return raw;
-}
-
-// 4. FORMAT REWORK
-function formatRework(text) {
-    let lineMatch = text.match(/(?:#|Line|PKG)?\s*([0-9]+-[0-9]+)/i);
-    let line = lineMatch ? `PKG ${lineMatch[1]}` : '';
-
-    let ngRaw = extractBlock('NG', text);
-    if (!ngRaw) {
-        let matchNg = text.match(/(?:^|\n)[\s*•_–.-]*NG\s*[:=–-]?\s*(.*)/i);
-        if (matchNg) ngRaw = cleanText(matchNg[1]);
-    }
-    let ngName = matchKlasifikasiNG(text, ngRaw);
-
-    let section = 'TW';
-    let lowerText = text.toLowerCase();
-    let lowerNg = (ngName || '').toLowerCase();
-
-    if (lowerText.includes('cell assy') || lowerText.includes('ca') || lowerNg.includes('sealing vision') || lowerNg.includes('lead vision')) {
-        section = 'CA';
-    } else if (/\bEL\b|Filling/i.test(text) || lowerNg.includes('weight') || lowerNg.includes('barcode') || lowerNg.includes('ir contact') || lowerNg.includes('lead contact') || lowerNg.includes('v sealing')) {
-        section = 'EL';
-    } else {
-        section = 'TW';
-    }
-
-    let cellIdRaw = extractBlock('Cell ID', text) || extractBlock('CellID', text) || extractBlock('Cell', text);
-    if (!cellIdRaw) {
-        let matchCell = text.match(/(?:Cell\s*ID|CellID)\s*[:=–-]?\s*([A-Za-z0-9_-]+)/i);
-        if (matchCell) cellIdRaw = cleanText(matchCell[1]);
-    }
-
-    let statusRaw = extractBlock('Status', text);
-    let isFailed = /fail|❌|gagal|\bNG\b/i.test(statusRaw);
-    let status = isFailed ? 'F' : 'Y';
-
-    let reason = '';
-    let detailReason = '';
-
-   if (isFailed) {
-        // Ambil isi keterangan setelah kata Failed/Gagal tanpa mengisi kolom reason
-        let matchDetail = statusRaw.match(/^[^(]*\((.*)\)[^)]*$/);
-        if (matchDetail) {
-            detailReason = matchDetail[1].trim();
-        } else {
-            detailReason = statusRaw.replace(/fail(ed)?|❌|gagal|status|[:=]/gi, '').trim();
+            return `${line}_${jam}_${lotId}_${pouchLot}_${status}`;
         }
-        reason = ''; // Kolom reason dikosongkan
-    }
 
-    let picRaw = extractBlock('PIC', text);
-    let pic = picRaw
-        .replace(/\s*(?:,|\/|\bdan\b|\band\b)\s*/gi, ' & ')
-        .replace(/\s*&\s*/g, ' & ')
-        .replace(/\s+/g, ' ')
-        .trim();
+        // 3.B FORMAT CRACK - EXCEL (Format: Line \t Date \t Time \t Count \t Lot ID \t Pouch Lot)
+        function formatCrackExcel(text) {
+            let lineMatch = text.match(/(?:Line|PKG)\s*[:=–-]?\s*([0-9]+-[0-9]+)/i);
+            let line = lineMatch ? lineMatch[1] : extractBlock('Line', text);
 
-    let lotId = '';
+            let date = extractBlock('Date', text) || extractBlock('Tanggal', text);
+            if (!date) {
+                let matchDate = text.match(/\b\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}\b/);
+                if (matchDate) date = matchDate[0];
+            }
 
-    let cellIds = cellIdRaw
-        .split(/[,;\n&]+|\b(?:dan|and)\b/i)
-        .map(id => id.trim())
-        .filter(id => id.length > 0);
-    
-    if (cellIds.length === 0) cellIds = [''];
+            let time = extractBlock('Time', text) || extractBlock('Jam', text) || extractBlock('Waktu', text);
+            if (time) {
+                time = time.replace(/(\d{1,2})\.(\d{2})/, '$1:$2');
+            } else {
+                let matchTime = text.match(/\b\d{1,2}[.:]\d{2}\b/);
+                if (matchTime) time = matchTime[0].replace('.', ':');
+            }
 
-    let results = cellIds.map(cellId => {
-        let pkgId = (section === 'EL') ? cellId : '';
-        let stkId = (section === 'TW' || section === 'CA') ? cellId : '';
-        return `${line}\t${section}\t${ngName}\t${lotId}\t${pkgId}\t${stkId}\t${status}\t${reason}\t${detailReason}\t${pic}`;
-    });
+            let count = extractBlock('Count', text) || extractBlock('Qty', text);
+            let lotId = extractBlock('Lot ID', text) || extractBlock('LotID', text) || extractBlock('Lot', text);
+            let pouchLot = extractBlock('Pouch Lot', text) || extractBlock('Pouch ID', text) || extractBlock('Lot Pouch', text);
 
-    return results.join('\n');
-}
+            return `${line}\t${date}\t${time}\t${count}\t${lotId}\t${pouchLot}`;
+        }
+
+        // FUNGSI KLASIFIKASI NG NAME (REWORK)
+        function matchKlasifikasiNG(fullText, ngRaw) {
+            let raw = (ngRaw || '');
+            let cleanedNg = raw.replace(/\((.*?)\)/gi, '').trim();
+            let ng_lower = cleanedNg.toLowerCase();
+            
+            let sign = '-';
+            let targetForSign = (raw + ' ' + (fullText.split('\n')[3] || '')).toLowerCase();
+            if (targetForSign.includes('(+)') || targetForSign.includes('plus')) {
+                sign = '+';
+            } else if (targetForSign.includes('(-)') || targetForSign.includes('minus')) {
+                sign = '-';
+            }
+
+            // SECTION EL
+            if (ng_lower === 'aw' || /\baw\b/i.test(ng_lower) || ng_lower.includes('weight after') || ng_lower.includes('after e/f') || ng_lower.includes('after ef')) {
+                return 'Weight After E/F';
+            }
+            if (ng_lower.includes('weight before') || ng_lower.includes('before e/f') || ng_lower.includes('before ef')) {
+                return 'Weight Before E/F';
+            }
+            if (ng_lower.includes('ir bcr') || ng_lower.includes('barcode read') || ng_lower.includes('read ng') || ng_lower.includes('bcr ng')) {
+                return 'Barcode Read NG';
+            }
+            if (ng_lower.includes('it validation') || ng_lower.includes('barcode it')) {
+                return 'Barcode IT Validation';
+            }
+            if (ng_lower.includes('verify ng') || ng_lower.includes('barcode verify')) {
+                return 'Barcode Verify NG';
+            }
+            if (ng_lower.includes('ir contact')) {
+                return 'IR Contact';
+            }
+            if (/ (ir\s*lc|lc) /i.test(ng_lower) || ng_lower.includes('lead contact')) {
+                return 'Lead Contact';
+            }
+            if (ng_lower.includes('v sealing') || ng_lower.includes('v-sealing') || ng_lower.includes('vsealing')) {
+                return 'V Sealing';
+            }
+
+            // SECTION CA
+            if (ng_lower.includes('lead pos') || ng_lower.includes('leadpos') || ng_lower.includes('lead position') || ng_lower.includes('lead vision') || ng_lower.includes('vision lead')) {
+                return 'Lead Vision';
+            }
+            if (ng_lower.includes('sealing vision') || ng_lower.includes('sealing ng') || ng_lower.includes('sealing')) {
+                return 'Sealing Vision';
+            }
+
+            // SECTION TW
+            if (ng_lower.includes('wrong tab') || ng_lower.includes('tab direction') || ng_lower.includes('wrong direction')) {
+                return 'Wrong Tab Direction';
+            }
+            if (ng_lower.includes('no lead') || ng_lower.includes('nolead')) {
+                return 'No Lead';
+            }
+            if (ng_lower.includes('short contact') || ng_lower.includes('short check') || ng_lower.includes('short')) {
+                return 'Short Contact';
+            }
+            if (ng_lower.includes('tab burr') || ng_lower.includes('burr')) {
+                return `Tab Burr (${sign})`;
+            }
+            if (ng_lower.includes('tab press') || ng_lower.includes('press')) {
+                return `Tab Press (${sign})`;
+            }
+            if (ng_lower.includes('main weld') || ng_lower.includes('mainweld') || ng_lower.includes('main_weld')) {
+                return `Main Weld (${sign})`;
+            }
+            if (/lead\s*fi?lm\d*/i.test(ng_lower) || (ng_lower.includes('lead') && ng_lower.includes('film'))) {
+                return `Lead Film (${sign})`;
+            }
+            if (ng_lower.includes('sepa') || ng_lower.includes('separator')) {
+                return `Sepa (${sign})`;
+            }
+            if (ng_lower.includes('cpp tape') || ng_lower.includes('tape') || ng_lower.includes('cpp')) {
+                return `CPP Tape (${sign})`;
+            }
+            if (ng_lower.includes('gap')) {
+                return `GAP (${sign})`;
+            }
+            if (ng_lower.includes('dimension') || raw.toLowerCase().includes('overkill')) {
+                return `Dimension Overkill (${sign})`;
+            }
+
+            return raw;
+        }
+
+        // 4. FORMAT REWORK
+        function formatRework(text) {
+            let lineMatch = text.match(/(?:#|Line|PKG)?\s*([0-9]+-[0-9]+)/i);
+            let line = lineMatch ? `PKG ${lineMatch[1]}` : '';
+
+            let ngRaw = extractBlock('NG', text);
+            if (!ngRaw) {
+                let matchNg = text.match(/(?:^|\n)[\s*•_–.-]*NG\s*[:=–-]?\s*(.*)/i);
+                if (matchNg) ngRaw = cleanText(matchNg[1]);
+            }
+            let ngName = matchKlasifikasiNG(text, ngRaw);
+
+            let section = 'TW';
+            let lowerText = text.toLowerCase();
+            let lowerNg = (ngName || '').toLowerCase();
+
+            if (lowerText.includes('cell assy') || lowerText.includes('ca') || lowerNg.includes('sealing vision') || lowerNg.includes('lead vision')) {
+                section = 'CA';
+            } else if (/\bEL\b|Filling/i.test(text) || lowerNg.includes('weight') || lowerNg.includes('barcode') || lowerNg.includes('ir contact') || lowerNg.includes('lead contact') || lowerNg.includes('v sealing')) {
+                section = 'EL';
+            } else {
+                section = 'TW';
+            }
+
+            let cellIdRaw = extractBlock('Cell ID', text) || extractBlock('CellID', text) || extractBlock('Cell', text);
+            if (!cellIdRaw) {
+                let matchCell = text.match(/(?:Cell\s*ID|CellID)\s*[:=–-]?\s*([A-Za-z0-9_-]+)/i);
+                if (matchCell) cellIdRaw = cleanText(matchCell[1]);
+            }
+
+            let statusRaw = extractBlock('Status', text);
+            let isFailed = /fail|❌|gagal|\bNG\b/i.test(statusRaw);
+            let status = isFailed ? 'F' : 'Y';
+
+            let reason = '';
+            let detailReason = '';
+
+            if (isFailed) {
+                let matchDetail = statusRaw.match(/^[^(]*\((.*)\)[^)]*$/);
+                if (matchDetail) {
+                    detailReason = matchDetail[1].trim();
+                } else {
+                    detailReason = statusRaw.replace(/fail(ed)?|❌|gagal|status|[:=]/gi, '').trim();
+                }
+                reason = '';
+            }
+
+            let picRaw = extractBlock('PIC', text);
+            let pic = picRaw
+                .replace(/\s*(?:,|\/|\bdan\b|\band\b)\s*/gi, ' & ')
+                .replace(/\s*&\s*/g, ' & ')
+                .replace(/\s+/g, ' ')
+                .trim();
+
+            let lotId = '';
+
+            let cellIds = cellIdRaw
+                .split(/[,;\n&]+|\b(?:dan|and)\b/i)
+                .map(id => id.trim())
+                .filter(id => id.length > 0);
+            
+            if (cellIds.length === 0) cellIds = [''];
+
+            let results = cellIds.map(cellId => {
+                let pkgId = (section === 'EL') ? cellId : '';
+                let stkId = (section === 'TW' || section === 'CA') ? cellId : '';
+                return `${line}\t${section}\t${ngName}\t${lotId}\t${pkgId}\t${stkId}\t${status}\t${reason}\t${detailReason}\t${pic}`;
+            });
+
+            return results.join('\n');
+        }
 
         function showToast() {
             const toast = document.getElementById('toast');
@@ -629,8 +720,8 @@ function formatRework(text) {
                 output = formatDowntime(input);
             } else if (currentMode === 'excel') {
                 output = formatExcel(input);
-            } else if (currentMode === 'naming') {
-                output = formatVisionNaming(input);
+            } else if (currentMode === 'crack') {
+                output = (crackSubMode === 'image') ? formatVisionNaming(input) : formatCrackExcel(input);
             } else if (currentMode === 'rework') {
                 output = formatRework(input);
             }
@@ -647,51 +738,48 @@ function formatRework(text) {
             }
         }
 
-// FITUR AUTO-DETECT MODE SAAT INPUT / PASTE
-function autoDetectMode(text) {
-    if (!text || text.trim().length < 4) return;
-    
-    // Bersihkan karakter spasi tak kasat mata bawaan copy-paste
-    let clean = text.replace(/\u00A0/g, ' ');
-    let lower = clean.toLowerCase();
+        // FITUR AUTO-DETECT MODE SAAT INPUT / PASTE
+        function autoDetectMode(text) {
+            if (!text || text.trim().length < 4) return;
+            
+            let clean = text.replace(/\u00A0/g, ' ');
+            let lower = clean.toLowerCase();
 
-    // 1. Prioritas Rework: Ada Cell ID atau baris NG
-    if (lower.includes('cell id') || lower.includes('cellid') || /(?:^|\n)[^\w\n]*ng\s*[:=–-]/i.test(clean)) {
-        if (currentMode !== 'rework') setMode('rework', true);
-        return;
-    }
+            // 1. Prioritas Rework
+            if (lower.includes('cell id') || lower.includes('cellid') || /(?:^|\n)[^\w\n]*ng\s*[:=–-]/i.test(clean)) {
+                if (currentMode !== 'rework') setMode('rework', true);
+                return;
+            }
 
-    // 2. Prioritas Crack: Ada indikator crack, pinhole, atau lot id vision
-    if (lower.includes('crack') || lower.includes('pinhole') || (lower.includes('lot id') && lower.includes('pouch lot'))) {
-        if (currentMode !== 'naming') setMode('naming', true);
-        return;
-    }
+            // 2. Prioritas Crack
+            if (lower.includes('crack') || lower.includes('pinhole') || (lower.includes('lot id') && lower.includes('pouch lot'))) {
+                if (currentMode !== 'crack') setMode('crack', true);
+                return;
+            }
 
-    // 3. Prioritas Wrinkle: Ada Pouch ID / Pouch Lot bersamaan dengan Count atau Time
-    if (lower.includes('count') || (lower.includes('pouch') && (lower.includes('jam') || lower.includes('time') || /\b\d{1,2}[.:]\d{2}\b/.test(clean)))) {
-        if (currentMode !== 'excel') setMode('excel', true);
-        return;
-    }
+            // 3. Prioritas Wrinkle
+            if (lower.includes('count') || (lower.includes('pouch') && (lower.includes('jam') || lower.includes('time') || /\b\d{1,2}[.:]\d{2}\b/.test(clean)))) {
+                if (currentMode !== 'excel') setMode('excel', true);
+                return;
+            }
 
-    // 4. Prioritas Losskey (Downtime): Ada Action, Countermeasure, Problem, Cause, atau Part Replacement
-    if (lower.includes('countermeasure') || lower.includes('action') || lower.includes('part replacement') || lower.includes('cause') || lower.includes('problem')) {
-        if (currentMode !== 'downtime') setMode('downtime', true);
-        return;
-    }
-}
+            // 4. Prioritas Losskey (Downtime)
+            if (lower.includes('countermeasure') || lower.includes('action') || lower.includes('part replacement') || lower.includes('cause') || lower.includes('problem')) {
+                if (currentMode !== 'downtime') setMode('downtime', true);
+                return;
+            }
+        }
 
-// Pasang pendengar event saat paste dan input di inputText
-const inputArea = document.getElementById('inputText');
-if (inputArea) {
-    inputArea.addEventListener('input', function(e) {
-        autoDetectMode(e.target.value);
-    });
-    inputArea.addEventListener('paste', function(e) {
-        // Ambil teks clipboard langsung sesaat sebelum masuk ke textarea
-        let pastedData = (e.clipboardData || window.clipboardData).getData('text');
-        autoDetectMode(pastedData);
-    });
-}
+        const inputArea = document.getElementById('inputText');
+        if (inputArea) {
+            inputArea.addEventListener('input', function(e) {
+                autoDetectMode(e.target.value);
+            });
+            inputArea.addEventListener('paste', function(e) {
+                let pastedData = (e.clipboardData || window.clipboardData).getData('text');
+                autoDetectMode(pastedData);
+            });
+        }
     </script>
 </body>
 </html>
