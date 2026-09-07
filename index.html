@@ -764,35 +764,40 @@ function formatCrackExcel(text) {
 
         // FITUR AUTO-DETECT MODE SAAT INPUT / PASTE
         function autoDetectMode(text) {
-            if (!text || text.trim().length < 4) return;
-            
-            let clean = text.replace(/\u00A0/g, ' ');
-            let lower = clean.toLowerCase();
+    if (!text || text.trim().length < 4) return;
+    
+    let clean = text.replace(/\u00A0/g, ' ');
+    let lower = clean.toLowerCase();
 
-            // 1. Prioritas Rework
-            if (lower.includes('cell id') || lower.includes('cellid') || /(?:^|\n)[^\w\n]*ng\s*[:=–-]/i.test(clean)) {
-                if (currentMode !== 'rework') setMode('rework', true);
-                return;
-            }
+    // 1. Prioritas Losskey (Downtime): Cek format bot downtime atau kata kunci khas losskey
+    if (
+        lower.includes('downtime bot') || 
+        lower.includes('countermeasure') || 
+        (lower.includes('start time') && lower.includes('duration')) ||
+        (lower.includes('section:') && lower.includes('location:'))
+    ) {
+        if (currentMode !== 'downtime') setMode('downtime', true);
+        return;
+    }
 
-            // 2. Prioritas Crack
-            if (lower.includes('crack') || lower.includes('pinhole') || (lower.includes('lot id') && lower.includes('pouch lot'))) {
-                if (currentMode !== 'crack') setMode('crack', true);
-                return;
-            }
+    // 2. Prioritas Rework: Ada Cell ID atau baris NG eksplisit
+    if (lower.includes('cell id') || lower.includes('cellid') || /(?:^|\n)[^\w\n]*ng\s*[:=–-]/i.test(clean)) {
+        if (currentMode !== 'rework') setMode('rework', true);
+        return;
+    }
 
-            // 3. Prioritas Wrinkle
-            if (lower.includes('count') || (lower.includes('pouch') && (lower.includes('jam') || lower.includes('time') || /\b\d{1,2}[.:]\d{2}\b/.test(clean)))) {
-                if (currentMode !== 'excel') setMode('excel', true);
-                return;
-            }
+    // 3. Prioritas Crack: Ada indikator crack, pinhole, atau lot id vision
+    if (lower.includes('crack') || lower.includes('pinhole') || (lower.includes('lot id') && lower.includes('pouch lot'))) {
+        if (currentMode !== 'crack') setMode('crack', true);
+        return;
+    }
 
-            // 4. Prioritas Losskey (Downtime)
-            if (lower.includes('countermeasure') || lower.includes('action') || lower.includes('part replacement') || lower.includes('cause') || lower.includes('problem')) {
-                if (currentMode !== 'downtime') setMode('downtime', true);
-                return;
-            }
-        }
+    // 4. Prioritas Wrinkle: Harus memiliki indikator Pouch bersamaan dengan jam/count
+    if ((lower.includes('pouch id') || lower.includes('pouch lot')) && (lower.includes('count') || /\b\d{1,2}[.:]\d{2}\b/.test(clean))) {
+        if (currentMode !== 'excel') setMode('excel', true);
+        return;
+    }
+}
 
         const inputArea = document.getElementById('inputText');
         if (inputArea) {
