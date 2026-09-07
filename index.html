@@ -290,7 +290,7 @@
         let currentMode = 'downtime';
         let crackSubMode = 'image';
 
-        function setCrackSubMode(subMode, keepInput = false) {
+       function setCrackSubMode(subMode) {
             crackSubMode = subMode;
 
             const btnImg = document.getElementById('btnCrackImage');
@@ -306,11 +306,19 @@
 
             const inputEl = document.getElementById('inputText');
             const outputEl = document.getElementById('outputText');
-            if (!keepInput && inputEl) {
-                inputEl.value = '';
-                inputEl.focus();
+            
+            // Input data TIDAK dihapus.
+            // Jika ada teks yang sudah diinput, otomatis konversi ulang ke format sub-tab yang dipilih
+            if (inputEl && inputEl.value.trim() !== '') {
+                let input = inputEl.value.trim();
+                let output = (crackSubMode === 'image') 
+                    ? formatVisionNaming(input) 
+                    : formatCrackExcel(input);
+
+                if (outputEl) outputEl.value = output;
+            } else {
+                if (outputEl) outputEl.value = '';
             }
-            if (outputEl) outputEl.value = '';
         }
 
         function setMode(mode, keepInput = false) {
