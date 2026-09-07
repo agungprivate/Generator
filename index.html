@@ -260,12 +260,13 @@
             <button class="btn-mode" id="btnMode2" type="button" onclick="setMode('excel')">Wrinkle</button>
             <button class="btn-mode" id="btnMode3" type="button" onclick="setMode('crack')">Crack</button>
             <button class="btn-mode" id="btnMode4" type="button" onclick="setMode('rework')">Rework</button>
+            <button class="btn-mode" id="btnMode5" type="button" onclick="setMode('top5')">Top 5</button>
         </div>
 
         <!-- SUB-TAB CRACK -->
         <div class="sub-mode-selector" id="crackSubTabs">
-            <button class="btn-sub-mode active" id="btnCrackImage" type="button" onclick="setCrackSubMode('image')">Image</button>
-            <button class="btn-sub-mode" id="btnCrackExcel" type="button" onclick="setCrackSubMode('excel')">Excel</button>
+            <button class="btn-sub-mode active" id="btnCrackImage" type="button" onclick="setCrackSubMode('image')">📷 Image (Naming)</button>
+            <button class="btn-sub-mode" id="btnCrackExcel" type="button" onclick="setCrackSubMode('excel')">📊 Excel</button>
         </div>
 
         <div class="grid">
@@ -290,7 +291,7 @@
         let currentMode = 'downtime';
         let crackSubMode = 'image';
 
-       function setCrackSubMode(subMode) {
+        function setCrackSubMode(subMode) {
             crackSubMode = subMode;
 
             const btnImg = document.getElementById('btnCrackImage');
@@ -307,8 +308,6 @@
             const inputEl = document.getElementById('inputText');
             const outputEl = document.getElementById('outputText');
             
-            // Input data TIDAK dihapus.
-            // Jika ada teks yang sudah diinput, otomatis konversi ulang ke format sub-tab yang dipilih
             if (inputEl && inputEl.value.trim() !== '') {
                 let input = inputEl.value.trim();
                 let output = (crackSubMode === 'image') 
@@ -328,7 +327,8 @@
                 { id: 'btnMode1', key: 'downtime' },
                 { id: 'btnMode2', key: 'excel' },
                 { id: 'btnMode3', key: 'crack' },
-                { id: 'btnMode4', key: 'rework' }
+                { id: 'btnMode4', key: 'rework' },
+                { id: 'btnMode5', key: 'top5' }
             ];
 
             tabButtons.forEach(tab => {
@@ -342,7 +342,6 @@
                 }
             });
 
-            // Tampilkan/sembunyikan sub-tab Crack
             const subTabs = document.getElementById('crackSubTabs');
             if (subTabs) {
                 subTabs.style.display = (mode === 'crack') ? 'flex' : 'none';
@@ -524,7 +523,6 @@ function formatCrackExcel(text) {
     let lineMatch = text.match(/(?:Line|PKG)\s*[:=–-]?\s*([0-9]+-[0-9]+)/i);
     let line = lineMatch ? lineMatch[1] : extractBlock('Line', text);
 
-    // Ambil tanggal dari teks jika ada, jika tidak ada gunakan sysdate (M/D/YYYY)
     let date = extractBlock('Date', text) || extractBlock('Tanggal', text);
     if (!date) {
         let matchDate = text.match(/\b\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}\b/);
@@ -544,21 +542,21 @@ function formatCrackExcel(text) {
         if (matchTime) time = matchTime[0].replace('.', ':');
     }
 
-    // Mendukung Count, Counting, Qty, Jumlah, atau pola "Counting : 818"
     let count = extractBlock('Count', text) || 
                 extractBlock('Counting', text) || 
                 extractBlock('Qty', text) || 
                 extractBlock('Jumlah', text);
 
     if (!count) {
-        let matchCount = text.match(/(?:Count(?:ing)?|Qty|Jumlah)\s*[:=–-]?\s*([0-9]+)/i);
+        let matchCount = text.match(/Count[^\n:]*[:=–-]?\s*([0-9]+)/i);
         if (matchCount) count = matchCount[1];
     }
 
     let lotId = extractBlock('Lot ID', text) || extractBlock('LotID', text) || extractBlock('Lot', text);
     let pouchLot = extractBlock('Pouch Lot', text) || extractBlock('Pouch ID', text) || extractBlock('Lot Pouch', text);
 
-    return `${line}\t${date}\t${time}\t${count}\t${lotId}\t${pouchLot}`;
+    // Sisipkan \uFEFF agar kolom Line tidak berubah menjadi tanggal di Excel
+    return `\uFEFF${line}\t${date}\t${time}\t${count}\t${lotId}\t${pouchLot}`;
 }
 
         // FUNGSI KLASIFIKASI NG NAME (REWORK)
@@ -575,7 +573,6 @@ function formatCrackExcel(text) {
                 sign = '-';
             }
 
-            // SECTION EL
             if (ng_lower === 'aw' || /\baw\b/i.test(ng_lower) || ng_lower.includes('weight after') || ng_lower.includes('after e/f') || ng_lower.includes('after ef')) {
                 return 'Weight After E/F';
             }
@@ -601,7 +598,6 @@ function formatCrackExcel(text) {
                 return 'V Sealing';
             }
 
-            // SECTION CA
             if (ng_lower.includes('lead pos') || ng_lower.includes('leadpos') || ng_lower.includes('lead position') || ng_lower.includes('lead vision') || ng_lower.includes('vision lead')) {
                 return 'Lead Vision';
             }
@@ -609,7 +605,6 @@ function formatCrackExcel(text) {
                 return 'Sealing Vision';
             }
 
-            // SECTION TW
             if (ng_lower.includes('wrong tab') || ng_lower.includes('tab direction') || ng_lower.includes('wrong direction')) {
                 return 'Wrong Tab Direction';
             }
@@ -719,6 +714,52 @@ function formatCrackExcel(text) {
             return results.join('\n');
         }
 
+       // 5. FORMAT TOP 5 (Line \t Root Cause \t Adjustment)
+function formatTop5(text) {
+    let lineMatch = text.match(/(?:Line\s*ID|Line|PKG)\s*[:=–-]?\s*([0-9]+-[0-9]+)/i);
+    let line = lineMatch ? lineMatch[1] : '';
+
+    let rootCause = extractBlock('Cause', text) || extractBlock('Root Cause', text);
+    let pic = extractBlock('PIC', text);
+
+    let rawActions = [];
+    let lines = text.split('\n');
+    let isAction = false;
+
+    for (let l of lines) {
+        let trimmed = l.trim();
+        if (/^[\s*_-]*(Countermeasure|Action|Adjustment)[\s*_-]*[:=]?/i.test(trimmed)) {
+            isAction = true;
+            let afterHeader = trimmed.replace(/^[\s*_-]*(Countermeasure|Action|Adjustment)[\s*_-]*[:=]?/i, '').trim();
+            if (afterHeader.length > 0) {
+                let clean = afterHeader.replace(/^(\d+[.)]|[-*•])\s*/, '').replace(/[*_]/g, '').trim();
+                if (clean) rawActions.push(clean);
+            }
+            continue;
+        }
+        if (isAction) {
+            if (/^[\s*_-]*(Result|Part Replacement|PIC|Qty Defect|Start Time|End Time|Duration|Stop Status|Status|Note|Risk Range)[\s*_-]*[:=]/i.test(trimmed)) {
+                isAction = false;
+                continue;
+            }
+            if (trimmed.length > 0) {
+                let cleanAction = trimmed.replace(/^(\d+[.)]|[-*•])\s*/, '').replace(/[*_]/g, '').trim();
+                if (cleanAction) rawActions.push(cleanAction);
+            }
+        }
+    }
+
+    let formattedAdjustment = 'Action :\n' + rawActions.map(act => `- ${act}`).join('\n');
+    if (pic) {
+        formattedAdjustment += `\nPIC : ${pic}`;
+    }
+
+    let safeAdjustment = `"${formattedAdjustment.replace(/"/g, '""')}"`;
+
+    // Sisipkan \uFEFF agar kolom Line tidak berubah menjadi tanggal di Excel
+    return `\uFEFF${line}\t${rootCause}\t${safeAdjustment}`;
+}
+
         function showToast() {
             const toast = document.getElementById('toast');
             if (toast) {
@@ -748,6 +789,8 @@ function formatCrackExcel(text) {
                 output = (crackSubMode === 'image') ? formatVisionNaming(input) : formatCrackExcel(input);
             } else if (currentMode === 'rework') {
                 output = formatRework(input);
+            } else if (currentMode === 'top5') {
+                output = formatTop5(input);
             }
 
             if (outputEl) {
@@ -764,40 +807,43 @@ function formatCrackExcel(text) {
 
         // FITUR AUTO-DETECT MODE SAAT INPUT / PASTE
         function autoDetectMode(text) {
-    if (!text || text.trim().length < 4) return;
-    
-    let clean = text.replace(/\u00A0/g, ' ');
-    let lower = clean.toLowerCase();
+            if (!text || text.trim().length < 4) return;
+            
+            let clean = text.replace(/\u00A0/g, ' ');
+            let lower = clean.toLowerCase();
 
-    // 1. Prioritas Losskey (Downtime): Cek format bot downtime atau kata kunci khas losskey
-    if (
-        lower.includes('downtime bot') || 
-        lower.includes('countermeasure') || 
-        (lower.includes('start time') && lower.includes('duration')) ||
-        (lower.includes('section:') && lower.includes('location:'))
-    ) {
-        if (currentMode !== 'downtime') setMode('downtime', true);
-        return;
-    }
+            // Jika user sengaja sedang memilih Top 5, biarkan tetap di Top 5
+            if (currentMode === 'top5') return;
 
-    // 2. Prioritas Rework: Ada Cell ID atau baris NG eksplisit
-    if (lower.includes('cell id') || lower.includes('cellid') || /(?:^|\n)[^\w\n]*ng\s*[:=–-]/i.test(clean)) {
-        if (currentMode !== 'rework') setMode('rework', true);
-        return;
-    }
+            // 1. Prioritas Losskey (Downtime Bot): Cek bot downtime atau header khas losskey
+            if (
+                lower.includes('downtime bot') || 
+                lower.includes('countermeasure') || 
+                (lower.includes('start time') && lower.includes('duration')) ||
+                (lower.includes('section:') && lower.includes('location:'))
+            ) {
+                if (currentMode !== 'downtime') setMode('downtime', true);
+                return;
+            }
 
-    // 3. Prioritas Crack: Ada indikator crack, pinhole, atau lot id vision
-    if (lower.includes('crack') || lower.includes('pinhole') || (lower.includes('lot id') && lower.includes('pouch lot'))) {
-        if (currentMode !== 'crack') setMode('crack', true);
-        return;
-    }
+            // 2. Prioritas Rework: Ada Cell ID atau baris NG
+            if (lower.includes('cell id') || lower.includes('cellid') || /(?:^|\n)[^\w\n]*ng\s*[:=–-]/i.test(clean)) {
+                if (currentMode !== 'rework') setMode('rework', true);
+                return;
+            }
 
-    // 4. Prioritas Wrinkle: Harus memiliki indikator Pouch bersamaan dengan jam/count
-    if ((lower.includes('pouch id') || lower.includes('pouch lot')) && (lower.includes('count') || /\b\d{1,2}[.:]\d{2}\b/.test(clean))) {
-        if (currentMode !== 'excel') setMode('excel', true);
-        return;
-    }
-}
+            // 3. Prioritas Crack: Ada indikator crack, pinhole, atau lot id vision
+            if (lower.includes('crack') || lower.includes('pinhole') || (lower.includes('lot id') && lower.includes('pouch lot'))) {
+                if (currentMode !== 'crack') setMode('crack', true);
+                return;
+            }
+
+            // 4. Prioritas Wrinkle: Harus memiliki Pouch Lot/ID bersamaan dengan Jam/Count
+            if ((lower.includes('pouch id') || lower.includes('pouch lot')) && (lower.includes('count') || /\b\d{1,2}[.:]\d{2}\b/.test(clean))) {
+                if (currentMode !== 'excel') setMode('excel', true);
+                return;
+            }
+        }
 
         const inputArea = document.getElementById('inputText');
         if (inputArea) {
