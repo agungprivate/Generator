@@ -519,31 +519,47 @@
             return `${line}_${jam}_${lotId}_${pouchLot}_${status}`;
         }
 
-        // 3.B FORMAT CRACK - EXCEL (Format: Line \t Date \t Time \t Count \t Lot ID \t Pouch Lot)
-        function formatCrackExcel(text) {
-            let lineMatch = text.match(/(?:Line|PKG)\s*[:=–-]?\s*([0-9]+-[0-9]+)/i);
-            let line = lineMatch ? lineMatch[1] : extractBlock('Line', text);
+       // 3.B FORMAT CRACK - EXCEL
+function formatCrackExcel(text) {
+    let lineMatch = text.match(/(?:Line|PKG)\s*[:=–-]?\s*([0-9]+-[0-9]+)/i);
+    let line = lineMatch ? lineMatch[1] : extractBlock('Line', text);
 
-            let date = extractBlock('Date', text) || extractBlock('Tanggal', text);
-            if (!date) {
-                let matchDate = text.match(/\b\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}\b/);
-                if (matchDate) date = matchDate[0];
-            }
-
-            let time = extractBlock('Time', text) || extractBlock('Jam', text) || extractBlock('Waktu', text);
-            if (time) {
-                time = time.replace(/(\d{1,2})\.(\d{2})/, '$1:$2');
-            } else {
-                let matchTime = text.match(/\b\d{1,2}[.:]\d{2}\b/);
-                if (matchTime) time = matchTime[0].replace('.', ':');
-            }
-
-            let count = extractBlock('Count', text) || extractBlock('Qty', text);
-            let lotId = extractBlock('Lot ID', text) || extractBlock('LotID', text) || extractBlock('Lot', text);
-            let pouchLot = extractBlock('Pouch Lot', text) || extractBlock('Pouch ID', text) || extractBlock('Lot Pouch', text);
-
-            return `${line}\t${date}\t${time}\t${count}\t${lotId}\t${pouchLot}`;
+    // Ambil tanggal dari teks jika ada, jika tidak ada gunakan sysdate (M/D/YYYY)
+    let date = extractBlock('Date', text) || extractBlock('Tanggal', text);
+    if (!date) {
+        let matchDate = text.match(/\b\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}\b/);
+        if (matchDate) {
+            date = matchDate[0];
+        } else {
+            let today = new Date();
+            date = `${today.getMonth() + 1}/${today.getDate()}/${today.getFullYear()}`;
         }
+    }
+
+    let time = extractBlock('Time', text) || extractBlock('Jam', text) || extractBlock('Waktu', text);
+    if (time) {
+        time = time.replace(/(\d{1,2})\.(\d{2})/, '$1:$2');
+    } else {
+        let matchTime = text.match(/\b\d{1,2}[.:]\d{2}\b/);
+        if (matchTime) time = matchTime[0].replace('.', ':');
+    }
+
+    // Mendukung Count, Counting, Qty, Jumlah, atau pola "Counting : 818"
+    let count = extractBlock('Count', text) || 
+                extractBlock('Counting', text) || 
+                extractBlock('Qty', text) || 
+                extractBlock('Jumlah', text);
+
+    if (!count) {
+        let matchCount = text.match(/(?:Count(?:ing)?|Qty|Jumlah)\s*[:=–-]?\s*([0-9]+)/i);
+        if (matchCount) count = matchCount[1];
+    }
+
+    let lotId = extractBlock('Lot ID', text) || extractBlock('LotID', text) || extractBlock('Lot', text);
+    let pouchLot = extractBlock('Pouch Lot', text) || extractBlock('Pouch ID', text) || extractBlock('Lot Pouch', text);
+
+    return `${line}\t${date}\t${time}\t${count}\t${lotId}\t${pouchLot}`;
+}
 
         // FUNGSI KLASIFIKASI NG NAME (REWORK)
         function matchKlasifikasiNG(fullText, ngRaw) {
