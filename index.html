@@ -195,13 +195,15 @@
         .actions {
             display: flex;
             justify-content: center;
+            gap: 12px;
             margin-top: 20px;
+            flex-wrap: wrap;
         }
 
         button.action-btn {
-            width: 100%;
-            max-width: 320px;
-            padding: 14px;
+            flex: 1;
+            max-width: 200px;
+            padding: 12px 18px;
             font-size: 14px;
             font-weight: 600;
             border: none;
@@ -219,11 +221,20 @@
         }
 
         .btn-convert {
+            background: var(--primary);
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+        }
+        .btn-convert:hover {
+            background: var(--primary-hover);
+        }
+
+        .btn-copy {
             background: var(--success);
             color: #ffffff;
             box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
         }
-        .btn-convert:hover {
+        .btn-copy:hover {
             background: var(--success-hover);
         }
 
@@ -265,8 +276,8 @@
 
         <!-- SUB-TAB CRACK -->
         <div class="sub-mode-selector" id="crackSubTabs">
-            <button class="btn-sub-mode active" id="btnCrackImage" type="button" onclick="setCrackSubMode('image')">Image</button>
-            <button class="btn-sub-mode" id="btnCrackExcel" type="button" onclick="setCrackSubMode('excel')">Excel</button>
+            <button class="btn-sub-mode active" id="btnCrackImage" type="button" onclick="setCrackSubMode('image')">📷 Image (Naming)</button>
+            <button class="btn-sub-mode" id="btnCrackExcel" type="button" onclick="setCrackSubMode('excel')">📊 Excel</button>
         </div>
 
         <div class="grid">
@@ -281,11 +292,12 @@
         </div>
 
         <div class="actions">
-            <button class="action-btn btn-convert" type="button" onclick="processFormat()">🔄️ Convert & Copy</button>
+            <button class="action-btn btn-convert" type="button" onclick="processConvert()">🔄 Convert</button>
+            <button class="action-btn btn-copy" type="button" onclick="copyOutput()">📋 Copy</button>
         </div>
     </div>
 
-    <div class="copied-toast" id="toast">✅ Hasil berhasil dikonversi dan disalin!</div>
+    <div class="copied-toast" id="toast">✅ Hasil berhasil disalin ke clipboard!</div>
 
     <script>
         let currentMode = 'downtime';
@@ -320,38 +332,38 @@
             }
         }
 
-       function setMode(mode, keepInput = false) {
-    currentMode = mode;
-    
-    const tabButtons = [
-        { id: 'btnMode1', key: 'downtime' },
-        { id: 'btnMode2', key: 'excel' },
-        { id: 'btnMode3', key: 'crack' },
-        { id: 'btnMode4', key: 'rework' },
-        { id: 'btnMode5', key: 'top5' }
-    ];
+        function setMode(mode, keepInput = false) {
+            currentMode = mode;
+            
+            const tabButtons = [
+                { id: 'btnMode1', key: 'downtime' },
+                { id: 'btnMode2', key: 'excel' },
+                { id: 'btnMode3', key: 'crack' },
+                { id: 'btnMode4', key: 'rework' },
+                { id: 'btnMode5', key: 'top5' }
+            ];
 
-    tabButtons.forEach(tab => {
-        const el = document.getElementById(tab.id);
-        if (el) {
-            el.classList.toggle('active', tab.key === mode);
+            tabButtons.forEach(tab => {
+                const el = document.getElementById(tab.id);
+                if (el) {
+                    el.classList.toggle('active', tab.key === mode);
+                }
+            });
+
+            const subTabs = document.getElementById('crackSubTabs');
+            if (subTabs) {
+                subTabs.style.display = (mode === 'crack') ? 'flex' : 'none';
+            }
+
+            const inputEl = document.getElementById('inputText');
+            const outputEl = document.getElementById('outputText');
+            
+            if (inputEl && inputEl.value.trim() !== '') {
+                processConvert();
+            } else {
+                if (outputEl) outputEl.value = '';
+            }
         }
-    });
-
-    const subTabs = document.getElementById('crackSubTabs');
-    if (subTabs) {
-        subTabs.style.display = (mode === 'crack') ? 'flex' : 'none';
-    }
-
-    // Jika sudah ada teks di input, langsung otomatis konversi ke format tab yang baru diklik
-    const inputEl = document.getElementById('inputText');
-    const outputEl = document.getElementById('outputText');
-    if (inputEl && inputEl.value.trim() !== '') {
-        processFormat();
-    } else {
-        if (outputEl) outputEl.value = '';
-    }
-}
 
         function cleanText(str) {
             if (!str) return '';
@@ -514,46 +526,45 @@
             return `${line}_${jam}_${lotId}_${pouchLot}_${status}`;
         }
 
-       // 3.B FORMAT CRACK - EXCEL
-function formatCrackExcel(text) {
-    let lineMatch = text.match(/(?:Line|PKG)\s*[:=–-]?\s*([0-9]+-[0-9]+)/i);
-    let line = lineMatch ? lineMatch[1] : extractBlock('Line', text);
+        // 3.B FORMAT CRACK - EXCEL
+        function formatCrackExcel(text) {
+            let lineMatch = text.match(/(?:Line|PKG)\s*[:=–-]?\s*([0-9]+-[0-9]+)/i);
+            let line = lineMatch ? lineMatch[1] : extractBlock('Line', text);
 
-    let date = extractBlock('Date', text) || extractBlock('Tanggal', text);
-    if (!date) {
-        let matchDate = text.match(/\b\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}\b/);
-        if (matchDate) {
-            date = matchDate[0];
-        } else {
-            let today = new Date();
-            date = `${today.getMonth() + 1}/${today.getDate()}/${today.getFullYear()}`;
+            let date = extractBlock('Date', text) || extractBlock('Tanggal', text);
+            if (!date) {
+                let matchDate = text.match(/\b\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}\b/);
+                if (matchDate) {
+                    date = matchDate[0];
+                } else {
+                    let today = new Date();
+                    date = `${today.getMonth() + 1}/${today.getDate()}/${today.getFullYear()}`;
+                }
+            }
+
+            let time = extractBlock('Time', text) || extractBlock('Jam', text) || extractBlock('Waktu', text);
+            if (time) {
+                time = time.replace(/(\d{1,2})\.(\d{2})/, '$1:$2');
+            } else {
+                let matchTime = text.match(/\b\d{1,2}[.:]\d{2}\b/);
+                if (matchTime) time = matchTime[0].replace('.', ':');
+            }
+
+            let count = extractBlock('Count', text) || 
+                        extractBlock('Counting', text) || 
+                        extractBlock('Qty', text) || 
+                        extractBlock('Jumlah', text);
+
+            if (!count) {
+                let matchCount = text.match(/Count[^\n:]*[:=–-]?\s*([0-9]+)/i);
+                if (matchCount) count = matchCount[1];
+            }
+
+            let lotId = extractBlock('Lot ID', text) || extractBlock('LotID', text) || extractBlock('Lot', text);
+            let pouchLot = extractBlock('Pouch Lot', text) || extractBlock('Pouch ID', text) || extractBlock('Lot Pouch', text);
+
+            return `\uFEFF${line}\t${date}\t${time}\t${count}\t${lotId}\t${pouchLot}`;
         }
-    }
-
-    let time = extractBlock('Time', text) || extractBlock('Jam', text) || extractBlock('Waktu', text);
-    if (time) {
-        time = time.replace(/(\d{1,2})\.(\d{2})/, '$1:$2');
-    } else {
-        let matchTime = text.match(/\b\d{1,2}[.:]\d{2}\b/);
-        if (matchTime) time = matchTime[0].replace('.', ':');
-    }
-
-    let count = extractBlock('Count', text) || 
-                extractBlock('Counting', text) || 
-                extractBlock('Qty', text) || 
-                extractBlock('Jumlah', text);
-
-    if (!count) {
-        let matchCount = text.match(/Count[^\n:]*[:=–-]?\s*([0-9]+)/i);
-        if (matchCount) count = matchCount[1];
-    }
-
-    let lotId = extractBlock('Lot ID', text) || extractBlock('LotID', text) || extractBlock('Lot', text);
-    let pouchLot = extractBlock('Pouch Lot', text) || extractBlock('Pouch ID', text) || extractBlock('Lot Pouch', text);
-
-    // Sisipkan \uFEFF agar kolom Line tidak berubah menjadi tanggal di Excel
-    return `\uFEFF${line}\t${date}\t${time}\t${count}\t${lotId}\t${pouchLot}`;
-}
 
         // FUNGSI KLASIFIKASI NG NAME (REWORK)
         function matchKlasifikasiNG(fullText, ngRaw) {
@@ -710,51 +721,50 @@ function formatCrackExcel(text) {
             return results.join('\n');
         }
 
-       // 5. FORMAT TOP 5 (Line \t Root Cause \t Adjustment)
-function formatTop5(text) {
-    let lineMatch = text.match(/(?:Line\s*ID|Line|PKG)\s*[:=–-]?\s*([0-9]+-[0-9]+)/i);
-    let line = lineMatch ? lineMatch[1] : '';
+        // 5. FORMAT TOP 5 (Line \t Root Cause \t Adjustment)
+        function formatTop5(text) {
+            let lineMatch = text.match(/(?:Line\s*ID|Line|PKG)\s*[:=–-]?\s*([0-9]+-[0-9]+)/i);
+            let line = lineMatch ? lineMatch[1] : '';
 
-    let rootCause = extractBlock('Cause', text) || extractBlock('Root Cause', text);
-    let pic = extractBlock('PIC', text);
+            let rootCause = extractBlock('Cause', text) || extractBlock('Root Cause', text);
+            let pic = extractBlock('PIC', text);
 
-    let rawActions = [];
-    let lines = text.split('\n');
-    let isAction = false;
+            let rawActions = [];
+            let lines = text.split('\n');
+            let isAction = false;
 
-    for (let l of lines) {
-        let trimmed = l.trim();
-        if (/^[\s*_-]*(Countermeasure|Action|Adjustment)[\s*_-]*[:=]?/i.test(trimmed)) {
-            isAction = true;
-            let afterHeader = trimmed.replace(/^[\s*_-]*(Countermeasure|Action|Adjustment)[\s*_-]*[:=]?/i, '').trim();
-            if (afterHeader.length > 0) {
-                let clean = afterHeader.replace(/^(\d+[.)]|[-*•])\s*/, '').replace(/[*_]/g, '').trim();
-                if (clean) rawActions.push(clean);
+            for (let l of lines) {
+                let trimmed = l.trim();
+                if (/^[\s*_-]*(Countermeasure|Action|Adjustment)[\s*_-]*[:=]?/i.test(trimmed)) {
+                    isAction = true;
+                    let afterHeader = trimmed.replace(/^[\s*_-]*(Countermeasure|Action|Adjustment)[\s*_-]*[:=]?/i, '').trim();
+                    if (afterHeader.length > 0) {
+                        let clean = afterHeader.replace(/^(\d+[.)]|[-*•])\s*/, '').replace(/[*_]/g, '').trim();
+                        if (clean) rawActions.push(clean);
+                    }
+                    continue;
+                }
+                if (isAction) {
+                    if (/^[\s*_-]*(Result|Part Replacement|PIC|Qty Defect|Start Time|End Time|Duration|Stop Status|Status|Note|Risk Range)[\s*_-]*[:=]/i.test(trimmed)) {
+                        isAction = false;
+                        continue;
+                    }
+                    if (trimmed.length > 0) {
+                        let cleanAction = trimmed.replace(/^(\d+[.)]|[-*•])\s*/, '').replace(/[*_]/g, '').trim();
+                        if (cleanAction) rawActions.push(cleanAction);
+                    }
+                }
             }
-            continue;
+
+            let formattedAdjustment = 'Action :\n' + rawActions.map(act => `- ${act}`).join('\n');
+            if (pic) {
+                formattedAdjustment += `\nPIC : ${pic}`;
+            }
+
+            let safeAdjustment = `"${formattedAdjustment.replace(/"/g, '""')}"`;
+
+            return `\uFEFF${line}\t${rootCause}\t${safeAdjustment}`;
         }
-        if (isAction) {
-            if (/^[\s*_-]*(Result|Part Replacement|PIC|Qty Defect|Start Time|End Time|Duration|Stop Status|Status|Note|Risk Range)[\s*_-]*[:=]/i.test(trimmed)) {
-                isAction = false;
-                continue;
-            }
-            if (trimmed.length > 0) {
-                let cleanAction = trimmed.replace(/^(\d+[.)]|[-*•])\s*/, '').replace(/[*_]/g, '').trim();
-                if (cleanAction) rawActions.push(cleanAction);
-            }
-        }
-    }
-
-    let formattedAdjustment = 'Action :\n' + rawActions.map(act => `- ${act}`).join('\n');
-    if (pic) {
-        formattedAdjustment += `\nPIC : ${pic}`;
-    }
-
-    let safeAdjustment = `"${formattedAdjustment.replace(/"/g, '""')}"`;
-
-    // Sisipkan \uFEFF agar kolom Line tidak berubah menjadi tanggal di Excel
-    return `\uFEFF${line}\t${rootCause}\t${safeAdjustment}`;
-}
 
         function showToast() {
             const toast = document.getElementById('toast');
@@ -766,7 +776,7 @@ function formatTop5(text) {
             }
         }
 
-        function processFormat() {
+        function processConvert() {
             const inputEl = document.getElementById('inputText');
             const outputEl = document.getElementById('outputText');
             
@@ -791,13 +801,26 @@ function formatTop5(text) {
 
             if (outputEl) {
                 outputEl.value = output;
-                outputEl.select();
-                navigator.clipboard.writeText(output).then(() => {
+            }
+        }
+
+        function copyOutput() {
+            const outputEl = document.getElementById('outputText');
+            let textToCopy = outputEl ? outputEl.value.trim() : '';
+
+            if (!textToCopy) return;
+
+            outputEl.select();
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(textToCopy).then(() => {
                     showToast();
                 }).catch(() => {
                     document.execCommand('copy');
                     showToast();
                 });
+            } else {
+                document.execCommand('copy');
+                showToast();
             }
         }
 
@@ -808,38 +831,34 @@ function formatTop5(text) {
             let clean = text.replace(/\u00A0/g, ' ');
             let lower = clean.toLowerCase();
 
-            // Jika user sengaja sedang memilih Top 5, biarkan tetap di Top 5
-            if (currentMode === 'top5') return;
-
-            // 1. Prioritas Losskey (Downtime Bot): Cek bot downtime atau header khas losskey
-           if (
-    lower.includes('downtime bot') || 
-    lower.includes('countermeasure') || 
-    (lower.includes('start time') && lower.includes('duration')) ||
-    (lower.includes('section:') && lower.includes('location:'))
-) {
-    // Jika posisi sudah di Top 5, jangan dipaksa pindah ke losskey
-    if (currentMode !== 'top5' && currentMode !== 'downtime') {
-        setMode('downtime', true);
-    }
-    return;
-}
-
-            // 2. Prioritas Rework: Ada Cell ID atau baris NG
+            // 1. Prioritas Rework
             if (lower.includes('cell id') || lower.includes('cellid') || /(?:^|\n)[^\w\n]*ng\s*[:=–-]/i.test(clean)) {
                 if (currentMode !== 'rework') setMode('rework', true);
                 return;
             }
 
-            // 3. Prioritas Crack: Ada indikator crack, pinhole, atau lot id vision
+            // 2. Prioritas Crack
             if (lower.includes('crack') || lower.includes('pinhole') || (lower.includes('lot id') && lower.includes('pouch lot'))) {
                 if (currentMode !== 'crack') setMode('crack', true);
                 return;
             }
 
-            // 4. Prioritas Wrinkle: Harus memiliki Pouch Lot/ID bersamaan dengan Jam/Count
+            // 3. Prioritas Wrinkle
             if ((lower.includes('pouch id') || lower.includes('pouch lot')) && (lower.includes('count') || /\b\d{1,2}[.:]\d{2}\b/.test(clean))) {
                 if (currentMode !== 'excel') setMode('excel', true);
+                return;
+            }
+
+            // 4. Prioritas Losskey / Top 5 (Downtime Bot)
+            if (
+                lower.includes('downtime bot') || 
+                lower.includes('countermeasure') || 
+                (lower.includes('start time') && lower.includes('duration')) ||
+                (lower.includes('section:') && lower.includes('location:'))
+            ) {
+                if (currentMode !== 'top5' && currentMode !== 'downtime') {
+                    setMode('downtime', true);
+                }
                 return;
             }
         }
