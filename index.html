@@ -425,7 +425,8 @@
             let location = extractBlock('Location', text);
             let problem = extractBlock('Problem', text);
             let cause = extractBlock('Cause', text);
-            let pic = extractBlock('PIC', text);
+            let picRaw = extractBlock('PIC', text);
+            let pic = formatPicNames(picRaw);
 
             let matchPart = text.match(/(?:^|\n)[\s*_-]*Part Replacement[\s*_-]*[:=–-]?\s*(.*?)(?=\s*(?:\n|\bPIC\b|\bResult\b|\bStatus\b|\/\/|$))/i);
             let partReplacement = matchPart ? cleanText(matchPart[1]) : '';
@@ -470,7 +471,7 @@
                 result += `\n\nPart Replacement: ${partReplacement}`;
             }
             
-            result += `\n//\nPIC : ${pic || '-'}`;
+           result += `\n//\nPIC : ${pic || '-'}`;
             return result;
         }
 
@@ -741,51 +742,53 @@
             return results.join('\n');
         }
 
-        // 5. FORMAT TOP 5 (Line \t Root Cause \t Adjustment)
-        function formatTop5(text) {
-            let lineMatch = text.match(/(?:Line\s*ID|Line|PKG)\s*[:=–-]?\s*([0-9]+-[0-9]+)/i);
-            let line = lineMatch ? lineMatch[1] : '';
+       // 5. FORMAT TOP 5 (Line \t Root Cause \t Adjustment)
+function formatTop5(text) {
+    let lineMatch = text.match(/(?:Line\s*ID|Line|PKG)\s*[:=–-]?\s*([0-9]+-[0-9]+)/i);
+    let line = lineMatch ? lineMatch[1] : '';
 
-            let rootCause = extractBlock('Cause', text) || extractBlock('Root Cause', text);
-            let pic = extractBlock('PIC', text);
+    let rootCause = extractBlock('Cause', text) || extractBlock('Root Cause', text);
+    let picRaw = extractBlock('PIC', text);
+    let pic = formatPicNames(picRaw);
 
-            let rawActions = [];
-            let lines = text.split('\n');
-            let isAction = false;
+    let rawActions = [];
+    let lines = text.split('\n');
+    let isAction = false;
 
-            for (let l of lines) {
-                let trimmed = l.trim();
-                if (/^[\s*_-]*(Countermeasure|Action|Adjustment)[\s*_-]*[:=]?/i.test(trimmed)) {
-                    isAction = true;
-                    let afterHeader = trimmed.replace(/^[\s*_-]*(Countermeasure|Action|Adjustment)[\s*_-]*[:=]?/i, '').trim();
-                    if (afterHeader.length > 0) {
-                        let clean = afterHeader.replace(/^(\d+[.)]|[-*•])\s*/, '').replace(/[*_]/g, '').trim();
-                        if (clean) rawActions.push(clean);
-                    }
-                    continue;
-                }
-                if (isAction) {
-                    if (/^[\s*_-]*(Result|Part Replacement|PIC|Qty Defect|Start Time|End Time|Duration|Stop Status|Status|Note|Risk Range)[\s*_-]*[:=]/i.test(trimmed)) {
-                        isAction = false;
-                        continue;
-                    }
-                    if (trimmed.length > 0) {
-                        let cleanAction = trimmed.replace(/^(\d+[.)]|[-*•])\s*/, '').replace(/[*_]/g, '').trim();
-                        if (cleanAction) rawActions.push(cleanAction);
-                    }
-                }
+    for (let l of lines) {
+        let trimmed = l.trim();
+        if (/^[\s*_-]*(Countermeasure|Action|Adjustment)[\s*_-]*[:=]?/i.test(trimmed)) {
+            isAction = true;
+            let afterHeader = trimmed.replace(/^[\s*_-]*(Countermeasure|Action|Adjustment)[\s*_-]*[:=]?/i, '').trim();
+            if (afterHeader.length > 0) {
+                let clean = afterHeader.replace(/^(\d+[.)]|[-*•])\s*/, '').replace(/[*_]/g, '').trim();
+                if (clean) rawActions.push(clean);
             }
-
-            let formattedAdjustment = 'Action :\n' + rawActions.map(act => `- ${act}`).join('\n');
-            if (pic) {
-                formattedAdjustment += `\nPIC : ${pic}`;
-            }
-
-            let safeAdjustment = `"${formattedAdjustment.replace(/"/g, '""')}"`;
-
-            // Gunakan format formula ="" agar Excel tidak mengubahnya menjadi tanggal
-            return `="${line}"\t${rootCause}\t${safeAdjustment}`;
+            continue;
         }
+        if (isAction) {
+            if (/^[\s*_-]*(Result|Part Replacement|PIC|Qty Defect|Start Time|End Time|Duration|Stop Status|Status|Note|Risk Range)[\s*_-]*[:=]/i.test(trimmed)) {
+                isAction = false;
+                continue;
+            }
+            if (trimmed.length > 0) {
+                let cleanAction = trimmed.replace(/^(\d+[.)]|[-*•])\s*/, '').replace(/[*_]/g, '').trim();
+                if (cleanAction) rawActions.push(cleanAction);
+            }
+        }
+    }
+
+    let formattedAdjustment = 'Action :\n' + rawActions.map(act => `- ${act}`).join('\n');
+    
+    // Memberi jarak 1 enter (baris kosong) sebelum PIC
+    if (pic) {
+        formattedAdjustment += `\n\nPIC : ${pic}`;
+    }
+
+    let safeAdjustment = `"${formattedAdjustment.replace(/"/g, '""')}"`;
+
+    return `="${line}"\t${rootCause}\t${safeAdjustment}`;
+}
 
         function showToast() {
             const toast = document.getElementById('toast');
@@ -884,6 +887,21 @@
                 return;
             }
         }
+
+        function formatPicNames(rawPic) {
+    if (!rawPic) return '';
+    let names = rawPic
+        .split(/[\/,]|\b(?:dan|and)\b|&/gi)
+        .map(n => cleanText(n))
+        .filter(n => n.length > 0);
+
+    if (names.length === 0) return '';
+    if (names.length === 1) return names[0];
+    if (names.length === 2) return `${names[0]} & ${names[1]}`;
+    
+    let last = names.pop();
+    return `${names.join(', ')} & ${last}`;
+}
 
         const inputArea = document.getElementById('inputText');
         if (inputArea) {
