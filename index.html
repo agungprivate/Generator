@@ -614,17 +614,18 @@
             return `${line}\t${date}\t${time}\t${count}\t${lotId}\t${pouchLot}`;
         }
 
-     // FUNGSI KLASIFIKASI NG NAME (REWORK)
+   // FUNGSI KLASIFIKASI NG NAME (REWORK)
         function matchKlasifikasiNG(fullText, ngRaw) {
-            let raw = (ngRaw || '');
+            let cleanFull = (fullText || '').replace(/\u00A0/g, ' ');
+            let raw = (ngRaw || '').replace(/\u00A0/g, ' ');
             let cleanedNg = raw.replace(/\((.*?)\)/gi, '').trim();
             let ng_lower = cleanedNg.toLowerCase();
             
             // Deteksi tanda (+) atau (-) dari seluruh isi teks
             let sign = '-';
-            if (/\(\s*\+\s*\)|\bplus\b/i.test(fullText)) {
+            if (/\(\s*\+\s*\)|\bplus\b/i.test(cleanFull)) {
                 sign = '+';
-            } else if (/\(\s*-\s*\)|\bminus\b/i.test(fullText)) {
+            } else if (/\(\s*-\s*\)|\bminus\b/i.test(cleanFull)) {
                 sign = '-';
             }
 
@@ -670,16 +671,16 @@
                 return 'Short Contact';
             }
 
-            // Lead Film dicek lebih awal
+            // Lead Film
             if (/lead\s*fi?lm\d*/i.test(ng_lower) || (ng_lower.includes('lead') && ng_lower.includes('film'))) {
                 return `Lead Film (${sign})`;
             }
 
-            // Lead R & Lead L (+ / -)
-            if (/\blead\s*r\b/i.test(ng_lower)) {
+            // Lead R & Lead L (Aman dari spasi/karakter tersembunyi)
+            if (/lead\s*r(?![a-z])/i.test(ng_lower)) {
                 return `Lead R (${sign})`;
             }
-            if (/\blead\s*l\b/i.test(ng_lower)) {
+            if (/lead\s*l(?![a-z])/i.test(ng_lower)) {
                 return `Lead L (${sign})`;
             }
 
@@ -708,8 +709,9 @@
             return raw;
         }
 
-        // 4. FORMAT REWORK
+      // 4. FORMAT REWORK
         function formatRework(text) {
+            text = text.replace(/\u00A0/g, ' '); // Bersihkan non-breaking space
             let lineMatch = text.match(/(?:#|Line|PKG)?\s*([0-9]+-[0-9]+)/i);
             let line = lineMatch ? `PKG ${lineMatch[1]}` : '';
 
@@ -719,6 +721,7 @@
                 if (matchNg) ngRaw = cleanText(matchNg[1]);
             }
             let ngName = matchKlasifikasiNG(text, ngRaw);
+            // ... (sisa kode formatRework ke bawah tetap sama)
 
             let section = 'TW';
             let lowerText = text.toLowerCase();
