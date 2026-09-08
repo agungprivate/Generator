@@ -614,17 +614,17 @@
             return `${line}\t${date}\t${time}\t${count}\t${lotId}\t${pouchLot}`;
         }
 
-        // FUNGSI KLASIFIKASI NG NAME (REWORK)
+     // FUNGSI KLASIFIKASI NG NAME (REWORK)
         function matchKlasifikasiNG(fullText, ngRaw) {
             let raw = (ngRaw || '');
             let cleanedNg = raw.replace(/\((.*?)\)/gi, '').trim();
             let ng_lower = cleanedNg.toLowerCase();
             
+            // Deteksi tanda (+) atau (-) dari seluruh isi teks
             let sign = '-';
-            let targetForSign = (raw + ' ' + (fullText.split('\n')[3] || '')).toLowerCase();
-            if (targetForSign.includes('(+)') || targetForSign.includes('plus')) {
+            if (/\(\s*\+\s*\)|\bplus\b/i.test(fullText)) {
                 sign = '+';
-            } else if (targetForSign.includes('(-)') || targetForSign.includes('minus')) {
+            } else if (/\(\s*-\s*\)|\bminus\b/i.test(fullText)) {
                 sign = '-';
             }
 
@@ -669,6 +669,20 @@
             if (ng_lower.includes('short contact') || ng_lower.includes('short check') || ng_lower.includes('short')) {
                 return 'Short Contact';
             }
+
+            // Lead Film dicek lebih awal
+            if (/lead\s*fi?lm\d*/i.test(ng_lower) || (ng_lower.includes('lead') && ng_lower.includes('film'))) {
+                return `Lead Film (${sign})`;
+            }
+
+            // Lead R & Lead L (+ / -)
+            if (/\blead\s*r\b/i.test(ng_lower)) {
+                return `Lead R (${sign})`;
+            }
+            if (/\blead\s*l\b/i.test(ng_lower)) {
+                return `Lead L (${sign})`;
+            }
+
             if (ng_lower.includes('tab burr') || ng_lower.includes('burr')) {
                 return `Tab Burr (${sign})`;
             }
@@ -677,18 +691,6 @@
             }
             if (ng_lower.includes('main weld') || ng_lower.includes('mainweld') || ng_lower.includes('main_weld')) {
                 return `Main Weld (${sign})`;
-            }
-            // 1. Cek Lead Film lebih dulu
-            if (/lead\s*fi?lm\d*/i.test(ng_lower) || (ng_lower.includes('lead') && ng_lower.includes('film'))) {
-                return `Lead Film (${sign})`;
-            }
-
-            // 2. Lead R & Lead L (+ / -)
-            if (/\blead\s*r\b/i.test(ng_lower)) {
-                return `Lead R (${sign})`;
-            }
-            if (/\blead\s*l\b/i.test(ng_lower)) {
-                return `Lead L (${sign})`;
             }
             if (ng_lower.includes('sepa') || ng_lower.includes('separator')) {
                 return `Sepa (${sign})`;
