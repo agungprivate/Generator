@@ -320,42 +320,38 @@
             }
         }
 
-        function setMode(mode, keepInput = false) {
-            currentMode = mode;
-            
-            const tabButtons = [
-                { id: 'btnMode1', key: 'downtime' },
-                { id: 'btnMode2', key: 'excel' },
-                { id: 'btnMode3', key: 'crack' },
-                { id: 'btnMode4', key: 'rework' },
-                { id: 'btnMode5', key: 'top5' }
-            ];
+       function setMode(mode, keepInput = false) {
+    currentMode = mode;
+    
+    const tabButtons = [
+        { id: 'btnMode1', key: 'downtime' },
+        { id: 'btnMode2', key: 'excel' },
+        { id: 'btnMode3', key: 'crack' },
+        { id: 'btnMode4', key: 'rework' },
+        { id: 'btnMode5', key: 'top5' }
+    ];
 
-            tabButtons.forEach(tab => {
-                const el = document.getElementById(tab.id);
-                if (el) {
-                    if (tab.key === mode) {
-                        el.classList.add('active');
-                    } else {
-                        el.classList.remove('active');
-                    }
-                }
-            });
-
-            const subTabs = document.getElementById('crackSubTabs');
-            if (subTabs) {
-                subTabs.style.display = (mode === 'crack') ? 'flex' : 'none';
-            }
-
-            const inputEl = document.getElementById('inputText');
-            const outputEl = document.getElementById('outputText');
-            
-            if (!keepInput && inputEl) {
-                inputEl.value = '';
-                inputEl.focus();
-            }
-            if (outputEl) outputEl.value = '';
+    tabButtons.forEach(tab => {
+        const el = document.getElementById(tab.id);
+        if (el) {
+            el.classList.toggle('active', tab.key === mode);
         }
+    });
+
+    const subTabs = document.getElementById('crackSubTabs');
+    if (subTabs) {
+        subTabs.style.display = (mode === 'crack') ? 'flex' : 'none';
+    }
+
+    // Jika sudah ada teks di input, langsung otomatis konversi ke format tab yang baru diklik
+    const inputEl = document.getElementById('inputText');
+    const outputEl = document.getElementById('outputText');
+    if (inputEl && inputEl.value.trim() !== '') {
+        processFormat();
+    } else {
+        if (outputEl) outputEl.value = '';
+    }
+}
 
         function cleanText(str) {
             if (!str) return '';
@@ -816,15 +812,18 @@ function formatTop5(text) {
             if (currentMode === 'top5') return;
 
             // 1. Prioritas Losskey (Downtime Bot): Cek bot downtime atau header khas losskey
-            if (
-                lower.includes('downtime bot') || 
-                lower.includes('countermeasure') || 
-                (lower.includes('start time') && lower.includes('duration')) ||
-                (lower.includes('section:') && lower.includes('location:'))
-            ) {
-                if (currentMode !== 'downtime') setMode('downtime', true);
-                return;
-            }
+           if (
+    lower.includes('downtime bot') || 
+    lower.includes('countermeasure') || 
+    (lower.includes('start time') && lower.includes('duration')) ||
+    (lower.includes('section:') && lower.includes('location:'))
+) {
+    // Jika posisi sudah di Top 5, jangan dipaksa pindah ke losskey
+    if (currentMode !== 'top5' && currentMode !== 'downtime') {
+        setMode('downtime', true);
+    }
+    return;
+}
 
             // 2. Prioritas Rework: Ada Cell ID atau baris NG
             if (lower.includes('cell id') || lower.includes('cellid') || /(?:^|\n)[^\w\n]*ng\s*[:=–-]/i.test(clean)) {
