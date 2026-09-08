@@ -201,7 +201,7 @@
         }
 
         button.action-btn {
-            padding: 12px 16px;
+            padding: 12px 18px;
             font-size: 13px;
             font-weight: 600;
             border: none;
@@ -218,7 +218,6 @@
             transform: scale(0.98);
         }
 
-        /* Tombol Convert & Copy (Paling Utama) */
         .btn-both {
             background: #0f172a;
             color: #ffffff;
@@ -230,7 +229,6 @@
             background: #1e293b;
         }
 
-        /* Tombol Convert Saja */
         .btn-convert {
             background: var(--primary);
             color: #ffffff;
@@ -242,7 +240,6 @@
             background: var(--primary-hover);
         }
 
-        /* Tombol Copy Saja */
         .btn-copy {
             background: var(--success);
             color: #ffffff;
@@ -293,8 +290,8 @@
 
         <!-- SUB-TAB CRACK -->
         <div class="sub-mode-selector" id="crackSubTabs">
-            <button class="btn-sub-mode active" id="btnCrackImage" type="button" onclick="setCrackSubMode('image')">Image</button>
-            <button class="btn-sub-mode" id="btnCrackExcel" type="button" onclick="setCrackSubMode('excel')">Excel</button>
+            <button class="btn-sub-mode active" id="btnCrackImage" type="button" onclick="setCrackSubMode('image')">📷 Image (Naming)</button>
+            <button class="btn-sub-mode" id="btnCrackExcel" type="button" onclick="setCrackSubMode('excel')">📊 Excel</button>
         </div>
 
         <div class="grid">
@@ -351,54 +348,52 @@
         }
 
         function setMode(mode, keepInput = false) {
-    const prevMode = currentMode;
-    currentMode = mode;
-    
-    const tabButtons = [
-        { id: 'btnMode1', key: 'downtime' },
-        { id: 'btnMode5', key: 'top5' },
-        { id: 'btnMode2', key: 'excel' },
-        { id: 'btnMode3', key: 'crack' },
-        { id: 'btnMode4', key: 'rework' }
-    ];
+            const prevMode = currentMode;
+            currentMode = mode;
+            
+            const tabButtons = [
+                { id: 'btnMode1', key: 'downtime' },
+                { id: 'btnMode5', key: 'top5' },
+                { id: 'btnMode2', key: 'excel' },
+                { id: 'btnMode3', key: 'crack' },
+                { id: 'btnMode4', key: 'rework' }
+            ];
 
-    tabButtons.forEach(tab => {
-        const el = document.getElementById(tab.id);
-        if (el) {
-            el.classList.toggle('active', tab.key === mode);
+            tabButtons.forEach(tab => {
+                const el = document.getElementById(tab.id);
+                if (el) {
+                    el.classList.toggle('active', tab.key === mode);
+                }
+            });
+
+            const subTabs = document.getElementById('crackSubTabs');
+            if (subTabs) {
+                subTabs.style.display = (mode === 'crack') ? 'flex' : 'none';
+            }
+
+            const inputEl = document.getElementById('inputText');
+            const outputEl = document.getElementById('outputText');
+
+            // Cek apakah perpindahan hanya antara Losskey ('downtime') dan Top 5 ('top5')
+            const isLosskeyTop5Pair = (prevMode === 'downtime' && mode === 'top5') || 
+                                      (prevMode === 'top5' && mode === 'downtime');
+
+            if (isLosskeyTop5Pair) {
+                if (inputEl && inputEl.value.trim() !== '') {
+                    processConvert();
+                } else if (outputEl) {
+                    outputEl.value = '';
+                }
+            } else {
+                if (!keepInput && inputEl) {
+                    inputEl.value = '';
+                    inputEl.focus();
+                }
+                if (outputEl) {
+                    outputEl.value = '';
+                }
+            }
         }
-    });
-
-    const subTabs = document.getElementById('crackSubTabs');
-    if (subTabs) {
-        subTabs.style.display = (mode === 'crack') ? 'flex' : 'none';
-    }
-
-    const inputEl = document.getElementById('inputText');
-    const outputEl = document.getElementById('outputText');
-
-    // Cek apakah perpindahan hanya terjadi antara Losskey ('downtime') dan Top 5 ('top5')
-    const isLosskeyTop5Pair = (prevMode === 'downtime' && mode === 'top5') || 
-                              (prevMode === 'top5' && mode === 'downtime');
-
-    if (isLosskeyTop5Pair) {
-        // Pertahankan input dan langsung konversi ulang ke format tab tujuan
-        if (inputEl && inputEl.value.trim() !== '') {
-            processConvert();
-        } else if (outputEl) {
-            outputEl.value = '';
-        }
-    } else {
-        // Jika pindah ke tab lain atau dari tab lain, langsung bersihkan (clear)
-        if (!keepInput && inputEl) {
-            inputEl.value = '';
-            inputEl.focus();
-        }
-        if (outputEl) {
-            outputEl.value = '';
-        }
-    }
-}
 
         function cleanText(str) {
             if (!str) return '';
@@ -421,11 +416,27 @@
             return cleanText(val);
         }
 
-        function formatPicWrinkle(rawPic) {
+        // FUNGSI SERAGAM FORMAT NAMA PIC (Title Case + '&' di nama terakhir)
+        function formatPicNames(rawPic) {
             if (!rawPic) return '';
+
+            function toTitleCase(str) {
+                return str
+                    .toLowerCase()
+                    .split(/\s+/)
+                    .map(word => {
+                        if (!word) return '';
+                        if (/^(pd|qc|qa|tw|ca|el|pkg)$/i.test(word)) {
+                            return word.toUpperCase();
+                        }
+                        return word.charAt(0).toUpperCase() + word.slice(1);
+                    })
+                    .join(' ');
+            }
+
             let names = rawPic
                 .split(/[\/,]|\b(?:dan|and)\b|&/gi)
-                .map(n => cleanText(n))
+                .map(n => toTitleCase(cleanText(n)))
                 .filter(n => n.length > 0);
 
             if (names.length === 0) return '';
@@ -442,6 +453,7 @@
             let location = extractBlock('Location', text);
             let problem = extractBlock('Problem', text);
             let cause = extractBlock('Cause', text);
+            
             let picRaw = extractBlock('PIC', text);
             let pic = formatPicNames(picRaw);
 
@@ -488,11 +500,11 @@
                 result += `\n\nPart Replacement: ${partReplacement}`;
             }
             
-           result += `\n//\nPIC : ${pic || '-'}`;
+            result += `\n//\nPIC : ${pic || '-'}`;
             return result;
         }
 
-       // 2. FORMAT WRINKLE
+        // 2. FORMAT WRINKLE
         function formatExcel(text) {
             let line = extractBlock('Line', text);
             if (!line) {
@@ -512,7 +524,7 @@
             let countRaw = extractBlock('Count', text);
             
             let picRaw = extractBlock('PIC', text);
-            let pic = formatPicWrinkle(picRaw);
+            let pic = formatPicNames(picRaw);
 
             let splitRegex = /[,\/;&]+|\b(?:dan|and)\b/i;
             
@@ -529,7 +541,6 @@
             for (let i = 0; i < maxLen; i++) {
                 let t = times[i] !== undefined ? times[i] : (times[0] || '');
                 let c = counts[i] !== undefined ? counts[i] : (counts[0] || '');
-                // Mengembalikan format Line polos tanpa tanda ="
                 rows.push(`${line}\t${problem}\t${t}\t${pouchId}\t${c}\t${pic}`);
             }
 
@@ -600,7 +611,6 @@
             let lotId = extractBlock('Lot ID', text) || extractBlock('LotID', text) || extractBlock('Lot', text);
             let pouchLot = extractBlock('Pouch Lot', text) || extractBlock('Pouch ID', text) || extractBlock('Lot Pouch', text);
 
-            // Menghapus =" dan kembali ke teks line polos
             return `${line}\t${date}\t${time}\t${count}\t${lotId}\t${pouchLot}`;
         }
 
@@ -735,11 +745,7 @@
             }
 
             let picRaw = extractBlock('PIC', text);
-            let pic = picRaw
-                .replace(/\s*(?:,|\/|\bdan\b|\band\b)\s*/gi, ' & ')
-                .replace(/\s*&\s*/g, ' & ')
-                .replace(/\s+/g, ' ')
-                .trim();
+            let pic = formatPicNames(picRaw);
 
             let lotId = '';
 
@@ -759,53 +765,55 @@
             return results.join('\n');
         }
 
-       // 5. FORMAT TOP 5 (Line \t Root Cause \t Adjustment)
-function formatTop5(text) {
-    let lineMatch = text.match(/(?:Line\s*ID|Line|PKG)\s*[:=–-]?\s*([0-9]+-[0-9]+)/i);
-    let line = lineMatch ? lineMatch[1] : '';
+        // 5. FORMAT TOP 5 (Line \t Root Cause \t Adjustment)
+        function formatTop5(text) {
+            let lineMatch = text.match(/(?:Line\s*ID|Line|PKG)\s*[:=–-]?\s*([0-9]+-[0-9]+)/i);
+            let line = lineMatch ? lineMatch[1] : '';
 
-    let rootCause = extractBlock('Cause', text) || extractBlock('Root Cause', text);
-    let picRaw = extractBlock('PIC', text);
-    let pic = formatPicNames(picRaw);
+            let rootCause = extractBlock('Cause', text) || extractBlock('Root Cause', text);
+            let picRaw = extractBlock('PIC', text);
+            let pic = formatPicNames(picRaw);
 
-    let rawActions = [];
-    let lines = text.split('\n');
-    let isAction = false;
+            let rawActions = [];
+            let lines = text.split('\n');
+            let isAction = false;
 
-    for (let l of lines) {
-        let trimmed = l.trim();
-        if (/^[\s*_-]*(Countermeasure|Action|Adjustment)[\s*_-]*[:=]?/i.test(trimmed)) {
-            isAction = true;
-            let afterHeader = trimmed.replace(/^[\s*_-]*(Countermeasure|Action|Adjustment)[\s*_-]*[:=]?/i, '').trim();
-            if (afterHeader.length > 0) {
-                let clean = afterHeader.replace(/^(\d+[.)]|[-*•])\s*/, '').replace(/[*_]/g, '').trim();
-                if (clean) rawActions.push(clean);
+            for (let l of lines) {
+                let trimmed = l.trim();
+                if (/^[\s*_-]*(Countermeasure|Action|Adjustment)[\s*_-]*[:=]?/i.test(trimmed)) {
+                    isAction = true;
+                    let afterHeader = trimmed.replace(/^[\s*_-]*(Countermeasure|Action|Adjustment)[\s*_-]*[:=]?/i, '').trim();
+                    if (afterHeader.length > 0) {
+                        let clean = afterHeader.replace(/^(\d+[.)]|[-*•])\s*/, '').replace(/[*_]/g, '').trim();
+                        if (clean) rawActions.push(clean);
+                    }
+                    continue;
+                }
+                if (isAction) {
+                    if (/^[\s*_-]*(Result|Part Replacement|PIC|Qty Defect|Start Time|End Time|Duration|Stop Status|Status|Note|Risk Range)[\s*_-]*[:=]/i.test(trimmed)) {
+                        isAction = false;
+                        continue;
+                    }
+                    if (trimmed.length > 0) {
+                        let cleanAction = trimmed.replace(/^(\d+[.)]|[-*•])\s*/, '').replace(/[*_]/g, '').trim();
+                        if (cleanAction) rawActions.push(cleanAction);
+                    }
+                }
             }
-            continue;
+
+            // Langsung daftar item tanpa tulisan "Action :"
+            let formattedAdjustment = rawActions.map(act => `- ${act}`).join('\n');
+            
+            // Jarak 1 enter kosong sebelum PIC
+            if (pic) {
+                formattedAdjustment += (formattedAdjustment ? '\n\n' : '') + `PIC : ${pic}`;
+            }
+
+            let safeAdjustment = `"${formattedAdjustment.replace(/"/g, '""')}"`;
+
+            // Prefix ="line" khusus Top 5 agar tidak menjadi tanggal di Excel
+            return `="${line}"\t${rootCause}\t${safeAdjustment}`;
         }
-        if (isAction) {
-            if (/^[\s*_-]*(Result|Part Replacement|PIC|Qty Defect|Start Time|End Time|Duration|Stop Status|Status|Note|Risk Range)[\s*_-]*[:=]/i.test(trimmed)) {
-                isAction = false;
-                continue;
-            }
-            if (trimmed.length > 0) {
-                let cleanAction = trimmed.replace(/^(\d+[.)]|[-*•])\s*/, '').replace(/[*_]/g, '').trim();
-                if (cleanAction) rawActions.push(cleanAction);
-            }
-        }
-    }
-
-    let formattedAdjustment = 'Action :\n' + rawActions.map(act => `- ${act}`).join('\n');
-    
-    // Memberi jarak 1 enter (baris kosong) sebelum PIC
-    if (pic) {
-        formattedAdjustment += `\n\nPIC : ${pic}`;
-    }
-
-    let safeAdjustment = `"${formattedAdjustment.replace(/"/g, '""')}"`;
-
-    return `="${line}"\t${rootCause}\t${safeAdjustment}`;
-}
 
         function showToast() {
             const toast = document.getElementById('toast');
@@ -845,12 +853,6 @@ function formatTop5(text) {
             }
         }
 
-        // Fungsi Kombo: Jalankan konversi lalu langsung salin ke clipboard
-        function processBoth() {
-            processConvert();
-            copyOutput();
-        }
-
         function copyOutput() {
             const outputEl = document.getElementById('outputText');
             let textToCopy = outputEl ? outputEl.value.trim() : '';
@@ -869,6 +871,11 @@ function formatTop5(text) {
                 document.execCommand('copy');
                 showToast();
             }
+        }
+
+        function processBoth() {
+            processConvert();
+            copyOutput();
         }
 
         // FITUR AUTO-DETECT MODE SAAT INPUT / PASTE
@@ -903,28 +910,12 @@ function formatTop5(text) {
                 (lower.includes('start time') && lower.includes('duration')) ||
                 (lower.includes('section:') && lower.includes('location:'))
             ) {
-                // Jika sedang di Top 5, pertahankan di Top 5. Jika di tab lain, arahkan ke Losskey.
                 if (currentMode !== 'top5' && currentMode !== 'downtime') {
                     setMode('downtime', true);
                 }
                 return;
             }
         }
-
-        function formatPicNames(rawPic) {
-    if (!rawPic) return '';
-    let names = rawPic
-        .split(/[\/,]|\b(?:dan|and)\b|&/gi)
-        .map(n => cleanText(n))
-        .filter(n => n.length > 0);
-
-    if (names.length === 0) return '';
-    if (names.length === 1) return names[0];
-    if (names.length === 2) return `${names[0]} & ${names[1]}`;
-    
-    let last = names.pop();
-    return `${names.join(', ')} & ${last}`;
-}
 
         const inputArea = document.getElementById('inputText');
         if (inputArea) {
