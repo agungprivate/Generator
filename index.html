@@ -195,16 +195,14 @@
         .actions {
             display: flex;
             justify-content: center;
-            gap: 12px;
+            gap: 10px;
             margin-top: 20px;
             flex-wrap: wrap;
         }
 
         button.action-btn {
-            flex: 1;
-            max-width: 200px;
-            padding: 12px 18px;
-            font-size: 14px;
+            padding: 12px 16px;
+            font-size: 13px;
             font-weight: 600;
             border: none;
             border-radius: 12px;
@@ -213,26 +211,44 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 8px;
+            gap: 6px;
         }
 
         button.action-btn:active {
             transform: scale(0.98);
         }
 
+        /* Tombol Convert & Copy (Paling Utama) */
+        .btn-both {
+            background: #0f172a;
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.25);
+            flex: 1.2;
+            min-width: 160px;
+        }
+        .btn-both:hover {
+            background: #1e293b;
+        }
+
+        /* Tombol Convert Saja */
         .btn-convert {
             background: var(--primary);
             color: #ffffff;
             box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+            flex: 1;
+            min-width: 120px;
         }
         .btn-convert:hover {
             background: var(--primary-hover);
         }
 
+        /* Tombol Copy Saja */
         .btn-copy {
             background: var(--success);
             color: #ffffff;
             box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+            flex: 1;
+            min-width: 120px;
         }
         .btn-copy:hover {
             background: var(--success-hover);
@@ -293,6 +309,7 @@
         </div>
 
         <div class="actions">
+            <button class="action-btn btn-both" type="button" onclick="processBoth()">⚡ Convert & Copy</button>
             <button class="action-btn btn-convert" type="button" onclick="processConvert()">🔄 Convert</button>
             <button class="action-btn btn-copy" type="button" onclick="copyOutput()">📋 Copy</button>
         </div>
@@ -826,6 +843,12 @@ function formatTop5(text) {
             if (outputEl) {
                 outputEl.value = output;
             }
+        }
+
+        // Fungsi Kombo: Jalankan konversi lalu langsung salin ke clipboard
+        function processBoth() {
+            processConvert();
+            copyOutput();
         }
 
         function copyOutput() {
