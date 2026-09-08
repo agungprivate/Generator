@@ -678,8 +678,17 @@
             if (ng_lower.includes('main weld') || ng_lower.includes('mainweld') || ng_lower.includes('main_weld')) {
                 return `Main Weld (${sign})`;
             }
+            // 1. Cek Lead Film lebih dulu
             if (/lead\s*fi?lm\d*/i.test(ng_lower) || (ng_lower.includes('lead') && ng_lower.includes('film'))) {
                 return `Lead Film (${sign})`;
+            }
+
+            // 2. Lead R & Lead L (+ / -)
+            if (/\blead\s*r\b/i.test(ng_lower)) {
+                return `Lead R (${sign})`;
+            }
+            if (/\blead\s*l\b/i.test(ng_lower)) {
+                return `Lead L (${sign})`;
             }
             if (ng_lower.includes('sepa') || ng_lower.includes('separator')) {
                 return `Sepa (${sign})`;
