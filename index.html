@@ -582,8 +582,8 @@
             let lotId = extractBlock('Lot ID', text) || extractBlock('LotID', text) || extractBlock('Lot', text);
             let pouchLot = extractBlock('Pouch Lot', text) || extractBlock('Pouch ID', text) || extractBlock('Lot Pouch', text);
 
-            // Gunakan format formula ="" agar Excel tidak mengubahnya menjadi tanggal
-            return `="${line}"\t${date}\t${time}\t${count}\t${lotId}\t${pouchLot}`;
+            // Menghapus =" dan kembali ke teks line polos
+            return `${line}\t${date}\t${time}\t${count}\t${lotId}\t${pouchLot}`;
         }
 
         // FUNGSI KLASIFIKASI NG NAME (REWORK)
