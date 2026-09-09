@@ -574,20 +574,45 @@
             return `${line}_${jam}_${lotId}_${pouchLot}_${status}`;
         }
 
-        // 3.B FORMAT CRACK - EXCEL
+       // 3.B FORMAT CRACK - EXCEL
         function formatCrackExcel(text) {
             let lineMatch = text.match(/(?:Line|PKG)\s*[:=–-]?\s*([0-9]+-[0-9]+)/i);
             let line = lineMatch ? lineMatch[1] : extractBlock('Line', text);
 
-            let date = extractBlock('Date', text) || extractBlock('Tanggal', text);
-            if (!date) {
+            let rawDate = extractBlock('Date', text) || extractBlock('Tanggal', text);
+            if (!rawDate) {
                 let matchDate = text.match(/\b\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}\b/);
-                if (matchDate) {
-                    date = matchDate[0];
-                } else {
-                    let today = new Date();
-                    date = `${today.getMonth() + 1}/${today.getDate()}/${today.getFullYear()}`;
+                if (matchDate) rawDate = matchDate[0];
+            }
+
+            let date = '';
+            if (rawDate) {
+                // Parsing format DD/MM/YYYY, MM/DD/YYYY, atau YYYY-MM-DD
+                let parts = rawDate.split(/[\/-]/);
+                if (parts.length === 3) {
+                    if (parts[0].length === 4) {
+                        // Jika format sudah YYYY-MM-DD
+                        let y = parts[0];
+                        let m = String(parts[1]).padStart(2, '0');
+                        let d = String(parts[2]).padStart(2, '0');
+                        date = `${y}-${m}-${d}`;
+                    } else if (parts[2].length === 4) {
+                        // Format DD/MM/YYYY
+                        let d = String(parts[0]).padStart(2, '0');
+                        let m = String(parts[1]).padStart(2, '0');
+                        let y = parts[2];
+                        date = `${y}-${m}-${d}`;
+                    }
                 }
+            }
+
+            // Default jika tanggal tidak ditemukan di input
+            if (!date) {
+                let today = new Date();
+                let y = today.getFullYear();
+                let m = String(today.getMonth() + 1).padStart(2, '0');
+                let d = String(today.getDate()).padStart(2, '0');
+                date = `${y}-${m}-${d}`;
             }
 
             let time = extractBlock('Time', text) || extractBlock('Jam', text) || extractBlock('Waktu', text);
