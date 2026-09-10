@@ -574,7 +574,7 @@
             return `${line}_${jam}_${lotId}_${pouchLot}_${status}`;
         }
 
-       // 3.B FORMAT CRACK - EXCEL
+      // 3.B FORMAT CRACK - EXCEL
         function formatCrackExcel(text) {
             let lineMatch = text.match(/(?:Line|PKG)\s*[:=–-]?\s*([0-9]+-[0-9]+)/i);
             let line = lineMatch ? lineMatch[1] : extractBlock('Line', text);
@@ -587,17 +587,14 @@
 
             let date = '';
             if (rawDate) {
-                // Parsing format DD/MM/YYYY, MM/DD/YYYY, atau YYYY-MM-DD
                 let parts = rawDate.split(/[\/-]/);
                 if (parts.length === 3) {
                     if (parts[0].length === 4) {
-                        // Jika format sudah YYYY-MM-DD
                         let y = parts[0];
                         let m = String(parts[1]).padStart(2, '0');
                         let d = String(parts[2]).padStart(2, '0');
                         date = `${y}-${m}-${d}`;
                     } else if (parts[2].length === 4) {
-                        // Format DD/MM/YYYY
                         let d = String(parts[0]).padStart(2, '0');
                         let m = String(parts[1]).padStart(2, '0');
                         let y = parts[2];
@@ -606,7 +603,6 @@
                 }
             }
 
-            // Default jika tanggal tidak ditemukan di input
             if (!date) {
                 let today = new Date();
                 let y = today.getFullYear();
@@ -623,20 +619,29 @@
                 if (matchTime) time = matchTime[0].replace('.', ':');
             }
 
-            let count = extractBlock('Count', text) || 
-                        extractBlock('Counting', text) || 
-                        extractBlock('Qty', text) || 
-                        extractBlock('Jumlah', text);
+            // Ekstraksi Count: Mendukung "Count Cleaning Forming" dan format ribuan bertitik
+            let countRaw = extractBlock('Count Cleaning Forming', text) ||
+                           extractBlock('Count Cleaning', text) ||
+                           extractBlock('Count', text) || 
+                           extractBlock('Counting', text) || 
+                           extractBlock('Qty', text) || 
+                           extractBlock('Jumlah', text);
 
-            if (!count) {
-                let matchCount = text.match(/Count[^\n:]*[:=–-]?\s*([0-9]+)/i);
-                if (matchCount) count = matchCount[1];
+            let count = '';
+            if (countRaw) {
+                count = countRaw.replace(/[^0-9]/g, '');
+            } else {
+                let matchCount = text.match(/Count[^\n:]*[:=–-]?\s*([0-9.,]+)/i);
+                if (matchCount) {
+                    count = matchCount[1].replace(/[^0-9]/g, '');
+                }
             }
 
             let lotId = extractBlock('Lot ID', text) || extractBlock('LotID', text) || extractBlock('Lot', text);
             let pouchLot = extractBlock('Pouch Lot', text) || extractBlock('Pouch ID', text) || extractBlock('Lot Pouch', text);
 
-            return `${line}\t${date}\t${time}\t${count}\t${lotId}\t${pouchLot}`;
+            // Format line dengan prefix ="..." agar format teks tetap terjaga
+            return `="${line}"\t${date}\t${time}\t${count}\t${lotId}\t${pouchLot}`;
         }
 
    // FUNGSI KLASIFIKASI NG NAME (REWORK)
