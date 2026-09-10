@@ -619,7 +619,6 @@
                 if (matchTime) time = matchTime[0].replace('.', ':');
             }
 
-            // Ekstraksi Count: Mendukung "Count Cleaning Forming" dan format ribuan bertitik
             let countRaw = extractBlock('Count Cleaning Forming', text) ||
                            extractBlock('Count Cleaning', text) ||
                            extractBlock('Count', text) || 
@@ -640,8 +639,8 @@
             let lotId = extractBlock('Lot ID', text) || extractBlock('LotID', text) || extractBlock('Lot', text);
             let pouchLot = extractBlock('Pouch Lot', text) || extractBlock('Pouch ID', text) || extractBlock('Lot Pouch', text);
 
-            // Format line dengan prefix ="..." agar format teks tetap terjaga
-            return `="${line}"\t${date}\t${time}\t${count}\t${lotId}\t${pouchLot}`;
+            // Kolom Line polos apa adanya
+            return `${line}\t${date}\t${time}\t${count}\t${lotId}\t${pouchLot}`;
         }
 
    // FUNGSI KLASIFIKASI NG NAME (REWORK)
