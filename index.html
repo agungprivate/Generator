@@ -738,7 +738,7 @@
             return raw;
         }
 
-      // 4. FORMAT REWORK
+     // 4. FORMAT REWORK
         function formatRework(text) {
             text = text.replace(/\u00A0/g, ' '); // Bersihkan non-breaking space
             let lineMatch = text.match(/(?:#|Line|PKG)?\s*([0-9]+-[0-9]+)/i);
@@ -750,7 +750,6 @@
                 if (matchNg) ngRaw = cleanText(matchNg[1]);
             }
             let ngName = matchKlasifikasiNG(text, ngRaw);
-            // ... (sisa kode formatRework ke bawah tetap sama)
 
             let section = 'TW';
             let lowerText = text.toLowerCase();
@@ -778,11 +777,18 @@
             let detailReason = '';
 
             if (isFailed) {
-                let matchDetail = statusRaw.match(/^[^(]*\((.*)\)[^)]*$/);
-                if (matchDetail) {
-                    detailReason = matchDetail[1].trim();
+                // 1. Cek dulu apakah ada baris NOTE / Keterangan
+                let matchNote = text.match(/(?:^|\n)[\s*•_–.-]*NOTE\s*[:=–-]?\s*(.*?)(?=\s*(?:\n\s*(?:Cc\b|PIC\b|Status\b|Total\b)|$))/is);
+                if (matchNote && matchNote[1].trim()) {
+                    detailReason = matchNote[1].split('\n')[0].trim();
                 } else {
-                    detailReason = statusRaw.replace(/fail(ed)?|❌|gagal|status|[:=]/gi, '').trim();
+                    // 2. Jika tidak ada NOTE, ambil dari keterangan di samping baris Status
+                    let matchDetail = statusRaw.match(/^[^(]*\((.*)\)[^)]*$/);
+                    if (matchDetail) {
+                        detailReason = matchDetail[1].trim();
+                    } else {
+                        detailReason = statusRaw.replace(/fail(ed)?|❌|gagal|status|[:=]/gi, '').trim();
+                    }
                 }
                 reason = '';
             }
