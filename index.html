@@ -685,136 +685,142 @@ function formatExcel(fullText) {
             return rows.join('\n');
         }
 
-        // 4. FORMAT REWORK
         function matchKlasifikasiNG(fullText, ngRaw) {
-            let cleanFull = (fullText || '').replace(/\u00A0/g, ' ');
-            let raw = (ngRaw || '').replace(/\u00A0/g, ' ');
-            let cleanedNg = raw.replace(/\((.*?)\)/gi, '').trim();
-            let ng_lower = cleanedNg.toLowerCase();
-            
-            let sign = '-';
-            if (/\(\s*\+\s*\)|\bplus\b/i.test(cleanFull)) {
-                sign = '+';
-            } else if (/\(\s*-\s*\)|\bminus\b/i.test(cleanFull)) {
-                sign = '-';
-            }
+    let cleanFull = (fullText || '').replace(/\u00A0/g, ' ');
+    let raw = (ngRaw || '').replace(/\u00A0/g, ' ');
+    let cleanedNg = raw.replace(/\((.*?)\)/gi, '').trim();
+    let ng_lower = cleanedNg.toLowerCase();
+    
+    // Deteksi tanda (+) atau [+] atau (-) atau [-]
+    let sign = '-';
+    if (/[\(\[]\s*\+\s*[\)\]]|\bplus\b/i.test(cleanFull)) {
+        sign = '+';
+    } else if (/[\(\[]\s*-\s*[\)\]]|\bminus\b/i.test(cleanFull)) {
+        sign = '-';
+    }
 
-            if (ng_lower === 'aw' || /\baw\b/i.test(ng_lower) || ng_lower.includes('weight after') || ng_lower.includes('after e/f') || ng_lower.includes('after ef')) {
-                return 'Weight After E/F';
-            }
-            if (ng_lower.includes('weight before') || ng_lower.includes('before e/f') || ng_lower.includes('before ef')) {
-                return 'Weight Before E/F';
-            }
-            if (ng_lower.includes('ir bcr') || ng_lower.includes('barcode read') || ng_lower.includes('read ng') || ng_lower.includes('bcr ng')) {
-                return 'Barcode Read NG';
-            }
-            if (ng_lower.includes('it validation') || ng_lower.includes('barcode it')) {
-                return 'Barcode IT Validation';
-            }
-            if (ng_lower.includes('verify ng') || ng_lower.includes('barcode verify')) {
-                return 'Barcode Verify NG';
-            }
-            if (ng_lower.includes('ir contact')) {
-                return 'IR Contact';
-            }
-            if (/ (ir\s*lc|lc) /i.test(ng_lower) || ng_lower.includes('lead contact')) {
-                return 'Lead Contact';
-            }
-            if (ng_lower.includes('v sealing') || ng_lower.includes('v-sealing') || ng_lower.includes('vsealing')) {
-                return 'V Sealing';
-            }
-            if (ng_lower.includes('lead pos') || ng_lower.includes('leadpos') || ng_lower.includes('lead position') || ng_lower.includes('lead vision') || ng_lower.includes('vision lead')) {
-                return 'Lead Vision';
-            }
-            if (ng_lower.includes('sealing vision') || ng_lower.includes('sealing ng') || ng_lower.includes('sealing')) {
-                return 'Sealing Vision';
-            }
-            if (ng_lower.includes('wrong tab') || ng_lower.includes('tab direction') || ng_lower.includes('wrong direction')) {
-                return 'Wrong Tab Direction';
-            }
-            if (ng_lower.includes('no lead') || ng_lower.includes('nolead')) {
-                return 'No Lead';
-            }
-            if (ng_lower.includes('short contact') || ng_lower.includes('short check') || ng_lower.includes('short')) {
-                return 'Short Contact';
-            }
-            if (/lead\s*fi?lm\d*/i.test(ng_lower) || (ng_lower.includes('lead') && ng_lower.includes('film'))) {
-                return `Lead Film (${sign})`;
-            }
-            if (/lead\s*r(?![a-z])/i.test(ng_lower)) {
-                return `Lead R (${sign})`;
-            }
-            if (/lead\s*l(?![a-z])/i.test(ng_lower)) {
-                return `Lead L (${sign})`;
-            }
-            if (ng_lower.includes('tab burr') || ng_lower.includes('burr')) {
-                return `Tab Burr (${sign})`;
-            }
-            if (ng_lower.includes('tab press') || ng_lower.includes('press')) {
-                return `Tab Press (${sign})`;
-            }
-            if (ng_lower.includes('main weld') || ng_lower.includes('mainweld') || ng_lower.includes('main_weld')) {
-                return `Main Weld (${sign})`;
-            }
-            if (ng_lower.includes('sepa') || ng_lower.includes('separator')) {
-                return `Sepa (${sign})`;
-            }
-            if (ng_lower.includes('cpp tape') || ng_lower.includes('tape') || ng_lower.includes('cpp')) {
-                return `CPP Tape (${sign})`;
-            }
-            if (ng_lower.includes('gap')) {
-                return `GAP (${sign})`;
-            }
-            if (ng_lower.includes('dimension') || raw.toLowerCase().includes('overkill')) {
-                return `Dimension Overkill (${sign})`;
-            }
+    if (ng_lower === 'aw' || /\baw\b/i.test(ng_lower) || ng_lower.includes('weight after') || ng_lower.includes('after e/f') || ng_lower.includes('after ef')) {
+        return 'Weight After E/F';
+    }
+    if (ng_lower.includes('weight before') || ng_lower.includes('before e/f') || ng_lower.includes('before ef')) {
+        return 'Weight Before E/F';
+    }
+    if (ng_lower.includes('ir bcr') || ng_lower.includes('barcode read') || ng_lower.includes('read ng') || ng_lower.includes('bcr ng')) {
+        return 'Barcode Read NG';
+    }
+    if (ng_lower.includes('it validation') || ng_lower.includes('barcode it')) {
+        return 'Barcode IT Validation';
+    }
+    if (ng_lower.includes('verify ng') || ng_lower.includes('barcode verify')) {
+        return 'Barcode Verify NG';
+    }
+    if (ng_lower.includes('ir contact')) {
+        return 'IR Contact';
+    }
+    if (/ (ir\s*lc|lc) /i.test(ng_lower) || ng_lower.includes('lead contact')) {
+        return 'Lead Contact';
+    }
+    if (ng_lower.includes('v sealing') || ng_lower.includes('v-sealing') || ng_lower.includes('vsealing')) {
+        return 'V Sealing';
+    }
 
-            return raw;
-        }
+    if (ng_lower.includes('lead pos') || ng_lower.includes('leadpos') || ng_lower.includes('lead position') || ng_lower.includes('lead vision') || ng_lower.includes('vision lead')) {
+        return 'Lead Vision';
+    }
+    if (ng_lower.includes('sealing vision') || ng_lower.includes('sealing ng') || ng_lower.includes('sealing')) {
+        return 'Sealing Vision';
+    }
+
+    if (ng_lower.includes('wrong tab') || ng_lower.includes('tab direction') || ng_lower.includes('wrong direction')) {
+        return 'Wrong Tab Direction';
+    }
+    if (ng_lower.includes('no lead') || ng_lower.includes('nolead')) {
+        return 'No Lead';
+    }
+    if (ng_lower.includes('short contact') || ng_lower.includes('short check') || ng_lower.includes('short')) {
+        return 'Short Contact';
+    }
+
+    if (/lead\s*fi?lm\d*/i.test(ng_lower) || (ng_lower.includes('lead') && ng_lower.includes('film'))) {
+        return `Lead Film (${sign})`;
+    }
+    if (/lead\s*r(?![a-z])/i.test(ng_lower)) {
+        return `Lead R (${sign})`;
+    }
+    if (/lead\s*l(?![a-z])/i.test(ng_lower)) {
+        return `Lead L (${sign})`;
+    }
+    if (ng_lower.includes('tab burr') || ng_lower.includes('burr')) {
+        return `Tab Burr (${sign})`;
+    }
+    if (ng_lower.includes('tab press') || ng_lower.includes('press')) {
+        return `Tab Press (${sign})`;
+    }
+    if (ng_lower.includes('main weld') || ng_lower.includes('mainweld') || ng_lower.includes('main_weld')) {
+        return `Main Weld (${sign})`;
+    }
+    if (ng_lower.includes('sepa') || ng_lower.includes('separator')) {
+        return `Sepa (${sign})`;
+    }
+    if (ng_lower.includes('cpp tape') || ng_lower.includes('tape') || ng_lower.includes('cpp')) {
+        return `CPP Tape (${sign})`;
+    }
+    if (ng_lower.includes('gap')) {
+        return `GAP (${sign})`;
+    }
+    if (ng_lower.includes('dimension') || raw.toLowerCase().includes('overkill')) {
+        return `Dimension Overkill (${sign})`;
+    }
+
+    return raw;
+}
 
    // 4. FORMAT REWORK (FIX BATCH & HEADER/KONTAK WHATSAPP)
 function formatRework(fullText) {
     if (!fullText) return '';
 
-    // Bersihkan non-breaking space
     fullText = fullText.replace(/\u00A0/g, ' ');
 
     let blocks = [];
 
-    // 1. CARI POSISI AWAL LAPORAN PERTAMA UNTUK BUANG TEKS SAMPAH
-    // Cek penanda awal yang sah: [Rework], [Problem Report], atau awal baris bertanda #
-    let firstIndex = fullText.search(/(?:\[(?:Rework|Problem Report)\]|(?:^|\n)\s*#(?:[0-9]+-[0-9]+|PKG))/i);
-    let cleanedFullText = firstIndex !== -1 ? fullText.substring(firstIndex) : fullText;
-
-    // 2. PECAH BLOK LAPORAN (BATCH SPLITTING)
-    if (/\[\d{1,2}[:.]\d{2}[^\]]*\]/i.test(cleanedFullText)) {
-        // Jika copas dengan timestamp WA seperti [20:26, 16/09/2026]
-        blocks = cleanedFullText
+    // Prioritas pemecah laporan batch:
+    // 1. Timestamp WA [20:26, ...]
+    // 2. Baris Rework tanggal: Rework 16/09/2026
+    // 3. Header kurung siku: [Rework] atau [Problem Report]
+    // 4. Nomor line bertanda pagar di baris baru: #2-1 atau #PKG
+    if (/\[\d{1,2}[:.]\d{2}[^\]]*\]/i.test(fullText)) {
+        blocks = fullText
             .split(/(?=\[\d{1,2}[:.]\d{2}[^\]]*\])/i)
             .map(b => b.trim())
             .filter(b => b.length > 0);
-    } else if (/\[(?:Rework|Problem Report)\]/i.test(cleanedFullText)) {
-        blocks = cleanedFullText
+    } else if (/(?:^|\n)\s*Rework\s+\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}/i.test(fullText)) {
+        blocks = fullText
+            .split(/(?=(?:^|\n)\s*Rework\s+\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4})/i)
+            .map(b => b.trim())
+            .filter(b => b.length > 0);
+    } else if (/\[(?:Rework|Problem Report)\]/i.test(fullText)) {
+        blocks = fullText
             .split(/(?=\[(?:Rework|Problem Report)\])/i)
             .map(b => b.trim())
             .filter(b => b.length > 0);
     } else {
-        // Potong berdasarkan awal baris baru yang memuat #4-2 atau #PKG
-        blocks = cleanedFullText
+        blocks = fullText
             .split(/(?=(?:^|\n)\s*(?:#\s*PKG|PKG\s*\d+-\d+|Line\s*[:=–-]|#(?:[0-9]+-[0-9]+)))/i)
             .map(b => b.trim())
             .filter(b => b.length > 0);
     }
 
-    if (blocks.length === 0) blocks = [cleanedFullText];
+    if (blocks.length === 0) blocks = [fullText];
 
     let allResults = [];
 
-    // 3. PROSES SETIAP BLOK
     blocks.forEach(text => {
-        // Ambil nomor line hanya dari baris yang sah (diawali # di awal baris atau kata Line :)
+        // Ambil baris line
         let lineMatch = text.match(/(?:^|\n)\s*(?:#|Line\s*[:=–-]|PKG)?\s*([0-9]+-[0-9]+)/i);
         let line = lineMatch ? `PKG ${lineMatch[1]}` : '';
+
+        // Abaikan blok jika tidak ada baris line yang valid
+        if (!line) return;
 
         let ngRaw = extractBlock('NG', text);
         if (!ngRaw) {
@@ -871,7 +877,6 @@ function formatRework(fullText) {
 
         let lotId = extractBlock('Lot ID', text) || extractBlock('LotID', text) || '';
 
-        // Pecah Cell ID bila ada pemisah koma, titik koma, spasi, atau enter
         let cellIds = cellIdRaw
             ? cellIdRaw.split(/[,;\n&]+|\b(?:dan|and)\b/i).map(id => id.trim()).filter(id => id.length > 0)
             : [];
