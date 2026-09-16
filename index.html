@@ -772,42 +772,48 @@ function formatExcel(fullText) {
             return raw;
         }
 
-       // 4. FORMAT REWORK (SUPPORT BATCH PESAN WA & MULTIPLE CELL ID)
+   // 4. FORMAT REWORK (FIX BATCH & HEADER/KONTAK WHATSAPP)
 function formatRework(fullText) {
     if (!fullText) return '';
 
     // Bersihkan non-breaking space
     fullText = fullText.replace(/\u00A0/g, ' ');
 
-    // 1. PISAHKAN BANYAK LAPORAN SEKALIGUS (BATCH SPLITTING)
-    // Mendukung pemisahan jika ada header WA ([20:26...]), [Rework], atau tanda #line
     let blocks = [];
-    if (/\[\d{1,2}[:.]\d{2}[^\]]*\]/i.test(fullText)) {
-        // Jika copas langsung dari WA Web dengan timestamp misal: [20:26, 16/09/2026]
-        blocks = fullText
+
+    // 1. CARI POSISI AWAL LAPORAN PERTAMA UNTUK BUANG TEKS SAMPAH
+    // Cek penanda awal yang sah: [Rework], [Problem Report], atau awal baris bertanda #
+    let firstIndex = fullText.search(/(?:\[(?:Rework|Problem Report)\]|(?:^|\n)\s*#(?:[0-9]+-[0-9]+|PKG))/i);
+    let cleanedFullText = firstIndex !== -1 ? fullText.substring(firstIndex) : fullText;
+
+    // 2. PECAH BLOK LAPORAN (BATCH SPLITTING)
+    if (/\[\d{1,2}[:.]\d{2}[^\]]*\]/i.test(cleanedFullText)) {
+        // Jika copas dengan timestamp WA seperti [20:26, 16/09/2026]
+        blocks = cleanedFullText
             .split(/(?=\[\d{1,2}[:.]\d{2}[^\]]*\])/i)
             .map(b => b.trim())
             .filter(b => b.length > 0);
-    } else if (/\[(?:Rework|Problem Report)\]/i.test(fullText)) {
-        blocks = fullText
+    } else if (/\[(?:Rework|Problem Report)\]/i.test(cleanedFullText)) {
+        blocks = cleanedFullText
             .split(/(?=\[(?:Rework|Problem Report)\])/i)
             .map(b => b.trim())
             .filter(b => b.length > 0);
     } else {
-        // Fallback jika tidak ada timestamp WA: potong berdasarkan #PKG / Line: / #4-2
-        blocks = fullText
-            .split(/(?=(?:^|\n)(?:#\s*PKG|PKG\s*\d+-\d+|Line\s*[:=–-]|#(?:[0-9]+-[0-9]+)))/i)
+        // Potong berdasarkan awal baris baru yang memuat #4-2 atau #PKG
+        blocks = cleanedFullText
+            .split(/(?=(?:^|\n)\s*(?:#\s*PKG|PKG\s*\d+-\d+|Line\s*[:=–-]|#(?:[0-9]+-[0-9]+)))/i)
             .map(b => b.trim())
             .filter(b => b.length > 0);
     }
 
-    if (blocks.length === 0) blocks = [fullText];
+    if (blocks.length === 0) blocks = [cleanedFullText];
 
     let allResults = [];
 
-    // 2. PROSES TIAP BLOK LAPORAN
+    // 3. PROSES SETIAP BLOK
     blocks.forEach(text => {
-        let lineMatch = text.match(/(?:#|Line|PKG)?\s*([0-9]+-[0-9]+)/i);
+        // Ambil nomor line hanya dari baris yang sah (diawali # di awal baris atau kata Line :)
+        let lineMatch = text.match(/(?:^|\n)\s*(?:#|Line\s*[:=–-]|PKG)?\s*([0-9]+-[0-9]+)/i);
         let line = lineMatch ? `PKG ${lineMatch[1]}` : '';
 
         let ngRaw = extractBlock('NG', text);
@@ -858,7 +864,6 @@ function formatRework(fullText) {
         }
 
         let picRaw = extractBlock('PIC', text);
-        // Hapus keterangan tambahan dalam kurung seperti (verify) pada PIC
         if (picRaw) {
             picRaw = picRaw.replace(/\([^)]*\)/g, '').trim();
         }
@@ -866,14 +871,13 @@ function formatRework(fullText) {
 
         let lotId = extractBlock('Lot ID', text) || extractBlock('LotID', text) || '';
 
-        // Pecah jika dalam 1 laporan ada banyak Cell ID (koma, enter, spasi, titik koma)
+        // Pecah Cell ID bila ada pemisah koma, titik koma, spasi, atau enter
         let cellIds = cellIdRaw
             ? cellIdRaw.split(/[,;\n&]+|\b(?:dan|and)\b/i).map(id => id.trim()).filter(id => id.length > 0)
             : [];
         
         if (cellIds.length === 0) cellIds = [''];
 
-        // Masukkan setiap baris ke allResults
         cellIds.forEach(cellId => {
             let pkgId = (section === 'EL') ? cellId : '';
             let stkId = (section === 'TW' || section === 'CA') ? cellId : '';
