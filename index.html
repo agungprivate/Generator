@@ -279,7 +279,7 @@
     <div class="container">
         <h1 class="header-title">Report Generator</h1>
         
-        <!-- POSISI TAB: LOSSKEY DAN TOP 5 BERSEBELAHAN -->
+        <!-- POSISI TAB -->
         <div class="mode-selector">
             <button class="btn-mode active" id="btnMode1" type="button" onclick="setMode('downtime')">Losskey</button>
             <button class="btn-mode" id="btnMode5" type="button" onclick="setMode('top5')">Top 5</button>
@@ -374,7 +374,6 @@
             const inputEl = document.getElementById('inputText');
             const outputEl = document.getElementById('outputText');
 
-            // Cek apakah perpindahan hanya antara Losskey ('downtime') dan Top 5 ('top5')
             const isLosskeyTop5Pair = (prevMode === 'downtime' && mode === 'top5') || 
                                       (prevMode === 'top5' && mode === 'downtime');
 
@@ -416,7 +415,6 @@
             return cleanText(val);
         }
 
-        // FUNGSI SERAGAM FORMAT NAMA PIC (Title Case + '&' di nama terakhir)
         function formatPicNames(rawPic) {
             if (!rawPic) return '';
 
@@ -504,57 +502,75 @@
             return result;
         }
 
-        // 2. FORMAT WRINKLE
-        function formatExcel(text) {
-            let line = extractBlock('Line', text);
-            if (!line) {
-                let matchLine = text.match(/(?:Line|PKG)?\s*[:=–-]?\s*(PKG\s*[0-9]+-[0-9]+|[0-9]+-[0-9]+)/i);
-                if (matchLine) line = matchLine[1].toUpperCase();
+        // 2. FORMAT WRINKLE (BATCH SUPPORT & LINE POLOS)
+        function formatExcel(fullText) {
+            if (!fullText) return '';
+
+            let blocks = [];
+            if (/\[Problem Report\]/i.test(fullText)) {
+                blocks = fullText
+                    .split(/(?=\[Problem Report\])/i)
+                    .map(b => b.trim())
+                    .filter(b => b.length > 0);
+            } else {
+                blocks = fullText
+                    .split(/(?=(?:^|\n)(?:Shift\s*\d+\s*)?(?:Line|PKG)\s*[:=–-])/i)
+                    .map(b => b.trim())
+                    .filter(b => b.length > 0);
             }
 
-            let problem = extractBlock('Problem', text);
+            if (blocks.length === 0) blocks = [fullText];
 
-            let timeRaw = extractBlock('TIME', text) || extractBlock('Jam', text) || extractBlock('Waktu', text);
-            if (!timeRaw) {
-                let matchTimes = text.match(/\b\d{1,2}[.:]\d{2}\b/g);
-                if (matchTimes) timeRaw = matchTimes.join(' & ');
-            }
+            let allRows = [];
 
-            let pouchId = extractBlock('Pouch ID', text) || extractBlock('Pouch Lot', text) || extractBlock('Pouch', text) || extractBlock('Lot Pouch', text);
-            let countRaw = extractBlock('Count', text);
-            
-            let picRaw = extractBlock('PIC', text);
-            let pic = formatPicNames(picRaw);
+            blocks.forEach(text => {
+                let line = extractBlock('Line', text);
+                if (!line) {
+                    let matchLine = text.match(/(?:Line|PKG)?\s*[:=–-]?\s*(PKG\s*[0-9]+-[0-9]+|[0-9]+-[0-9]+)/i);
+                    if (matchLine) line = matchLine[1].toUpperCase();
+                }
 
-            let splitRegex = /[,\/;&]+|\b(?:dan|and)\b/i;
-            
-            let times = timeRaw
-                ? timeRaw.split(splitRegex).map(t => t.trim().replace(/(\d{1,2})\.(\d{2})/, '$1:$2')).filter(t => t.length > 0)
-                : [];
-            let counts = countRaw
-                ? countRaw.split(splitRegex).map(c => c.trim().replace(/\./g, '')).filter(c => c.length > 0)
-                : [];
+                let problem = extractBlock('Problem', text);
 
-            let maxLen = Math.max(times.length, counts.length, 1);
-            let rows = [];
+                let timeRaw = extractBlock('TIME', text) || extractBlock('Jam', text) || extractBlock('Waktu', text);
+                if (!timeRaw) {
+                    let matchTimes = text.match(/\b\d{1,2}[.:]\d{2}\b/g);
+                    if (matchTimes) timeRaw = matchTimes.join(' & ');
+                }
 
-            for (let i = 0; i < maxLen; i++) {
-                let t = times[i] !== undefined ? times[i] : (times[0] || '');
-                let c = counts[i] !== undefined ? counts[i] : (counts[0] || '');
-                rows.push(`${line}\t${problem}\t${t}\t${pouchId}\t${c}\t${pic}`);
-            }
+                let pouchId = extractBlock('Pouch ID', text) || extractBlock('Pouch Lot', text) || extractBlock('Pouch', text) || extractBlock('Lot Pouch', text);
+                let countRaw = extractBlock('Count', text);
+                
+                let picRaw = extractBlock('PIC', text);
+                let pic = formatPicNames(picRaw);
 
-            return rows.join('\n');
+                let splitRegex = /[,\/;&]+|\b(?:dan|and)\b/i;
+                
+                let times = timeRaw
+                    ? timeRaw.split(splitRegex).map(t => t.trim().replace(/(\d{1,2})\.(\d{2})/, '$1:$2')).filter(t => t.length > 0)
+                    : [];
+                let counts = countRaw
+                    ? countRaw.split(splitRegex).map(c => c.trim().replace(/\./g, '')).filter(c => c.length > 0)
+                    : [];
+
+                let maxLen = Math.max(times.length, counts.length, 1);
+
+                for (let i = 0; i < maxLen; i++) {
+                    let t = times[i] !== undefined ? times[i] : (times[0] || '');
+                    let c = counts[i] !== undefined ? counts[i] : (counts[0] || '');
+                    allRows.push(`${line}\t${problem}\t${t}\t${pouchId}\t${c}\t${pic}`);
+                }
+            });
+
+            return allRows.join('\n');
         }
 
-        // 3.A FORMAT CRACK - IMAGE (NAMING)
+        // 3.A FORMAT CRACK - IMAGE (NAMING) - SUPPORT MULTIPLE DATA
         function formatVisionNaming(text) {
             let lineMatch = text.match(/(?:Line|PKG)\s*[:=]?\s*([0-9]+-[0-9]+)/i);
             let line = lineMatch ? lineMatch[1] : '';
 
             let jamRaw = extractBlock('Jam', text) || extractBlock('Time', text);
-            let jam = jamRaw.replace(/[^0-9]/g, '');
-
             let lotId = extractBlock('Lot ID', text) || extractBlock('LotID', text);
             let pouchLot = extractBlock('Pouch Lot', text) || extractBlock('Pouch ID', text);
 
@@ -571,10 +587,19 @@
                 status = 'NG';
             }
 
-            return `${line}_${jam}_${lotId}_${pouchLot}_${status}`;
+            let splitRegex = /[,\/;&]+|\b(?:dan|and)\b/i;
+            let jams = jamRaw
+                ? jamRaw.split(splitRegex).map(j => j.replace(/[^0-9]/g, '')).filter(j => j.length > 0)
+                : [];
+
+            if (jams.length === 0) {
+                return `${line}__${lotId}_${pouchLot}_${status}`;
+            }
+
+            return jams.map(j => `${line}_${j}_${lotId}_${pouchLot}_${status}`).join('\n');
         }
 
-      // 3.B FORMAT CRACK - EXCEL
+        // 3.B FORMAT CRACK - EXCEL - SUPPORT MULTIPLE DATA & PREVENT DATE FORMAT
         function formatCrackExcel(text) {
             let lineMatch = text.match(/(?:Line|PKG)\s*[:=–-]?\s*([0-9]+-[0-9]+)/i);
             let line = lineMatch ? lineMatch[1] : extractBlock('Line', text);
@@ -611,14 +636,7 @@
                 date = `${y}-${m}-${d}`;
             }
 
-            let time = extractBlock('Time', text) || extractBlock('Jam', text) || extractBlock('Waktu', text);
-            if (time) {
-                time = time.replace(/(\d{1,2})\.(\d{2})/, '$1:$2');
-            } else {
-                let matchTime = text.match(/\b\d{1,2}[.:]\d{2}\b/);
-                if (matchTime) time = matchTime[0].replace('.', ':');
-            }
-
+            let timeRaw = extractBlock('Time', text) || extractBlock('Jam', text) || extractBlock('Waktu', text);
             let countRaw = extractBlock('Count Cleaning Forming', text) ||
                            extractBlock('Count Cleaning', text) ||
                            extractBlock('Count', text) || 
@@ -626,31 +644,44 @@
                            extractBlock('Qty', text) || 
                            extractBlock('Jumlah', text);
 
-            let count = '';
+            let splitRegex = /[,\/;&]+|\b(?:dan|and)\b/i;
+
+            let times = [];
+            if (timeRaw) {
+                times = timeRaw.split(splitRegex)
+                    .map(t => t.trim().replace(/(\d{1,2})\.(\d{2})/, '$1:$2'))
+                    .filter(t => t.length > 0);
+            }
+
+            let counts = [];
             if (countRaw) {
-                count = countRaw.replace(/[^0-9]/g, '');
-            } else {
-                let matchCount = text.match(/Count[^\n:]*[:=–-]?\s*([0-9.,]+)/i);
-                if (matchCount) {
-                    count = matchCount[1].replace(/[^0-9]/g, '');
-                }
+                counts = countRaw.split(splitRegex)
+                    .map(c => c.trim().replace(/\./g, '').replace(/[^0-9]/g, ''))
+                    .filter(c => c.length > 0);
             }
 
             let lotId = extractBlock('Lot ID', text) || extractBlock('LotID', text) || extractBlock('Lot', text);
             let pouchLot = extractBlock('Pouch Lot', text) || extractBlock('Pouch ID', text) || extractBlock('Lot Pouch', text);
 
-            // Bungkus dengan ="..." agar Excel membacanya murni sebagai teks, bukan tanggal
-return `="${line}"\t${date}\t${time}\t${count}\t${lotId}\t${pouchLot}`;
+            let maxLen = Math.max(times.length, counts.length, 1);
+            let rows = [];
+
+            for (let i = 0; i < maxLen; i++) {
+                let t = times[i] !== undefined ? times[i] : (times[0] || '');
+                let c = counts[i] !== undefined ? counts[i] : (counts[0] || '');
+                rows.push(`="${line}"\t${date}\t${t}\t${c}\t${lotId}\t${pouchLot}`);
+            }
+
+            return rows.join('\n');
         }
 
-   // FUNGSI KLASIFIKASI NG NAME (REWORK)
+        // 4. FORMAT REWORK
         function matchKlasifikasiNG(fullText, ngRaw) {
             let cleanFull = (fullText || '').replace(/\u00A0/g, ' ');
             let raw = (ngRaw || '').replace(/\u00A0/g, ' ');
             let cleanedNg = raw.replace(/\((.*?)\)/gi, '').trim();
             let ng_lower = cleanedNg.toLowerCase();
             
-            // Deteksi tanda (+) atau (-) dari seluruh isi teks
             let sign = '-';
             if (/\(\s*\+\s*\)|\bplus\b/i.test(cleanFull)) {
                 sign = '+';
@@ -682,14 +713,12 @@ return `="${line}"\t${date}\t${time}\t${count}\t${lotId}\t${pouchLot}`;
             if (ng_lower.includes('v sealing') || ng_lower.includes('v-sealing') || ng_lower.includes('vsealing')) {
                 return 'V Sealing';
             }
-
             if (ng_lower.includes('lead pos') || ng_lower.includes('leadpos') || ng_lower.includes('lead position') || ng_lower.includes('lead vision') || ng_lower.includes('vision lead')) {
                 return 'Lead Vision';
             }
             if (ng_lower.includes('sealing vision') || ng_lower.includes('sealing ng') || ng_lower.includes('sealing')) {
                 return 'Sealing Vision';
             }
-
             if (ng_lower.includes('wrong tab') || ng_lower.includes('tab direction') || ng_lower.includes('wrong direction')) {
                 return 'Wrong Tab Direction';
             }
@@ -699,20 +728,15 @@ return `="${line}"\t${date}\t${time}\t${count}\t${lotId}\t${pouchLot}`;
             if (ng_lower.includes('short contact') || ng_lower.includes('short check') || ng_lower.includes('short')) {
                 return 'Short Contact';
             }
-
-            // Lead Film
             if (/lead\s*fi?lm\d*/i.test(ng_lower) || (ng_lower.includes('lead') && ng_lower.includes('film'))) {
                 return `Lead Film (${sign})`;
             }
-
-            // Lead R & Lead L (Aman dari spasi/karakter tersembunyi)
             if (/lead\s*r(?![a-z])/i.test(ng_lower)) {
                 return `Lead R (${sign})`;
             }
             if (/lead\s*l(?![a-z])/i.test(ng_lower)) {
                 return `Lead L (${sign})`;
             }
-
             if (ng_lower.includes('tab burr') || ng_lower.includes('burr')) {
                 return `Tab Burr (${sign})`;
             }
@@ -738,9 +762,8 @@ return `="${line}"\t${date}\t${time}\t${count}\t${lotId}\t${pouchLot}`;
             return raw;
         }
 
-     // 4. FORMAT REWORK
         function formatRework(text) {
-            text = text.replace(/\u00A0/g, ' '); // Bersihkan non-breaking space
+            text = text.replace(/\u00A0/g, ' ');
             let lineMatch = text.match(/(?:#|Line|PKG)?\s*([0-9]+-[0-9]+)/i);
             let line = lineMatch ? `PKG ${lineMatch[1]}` : '';
 
@@ -777,12 +800,10 @@ return `="${line}"\t${date}\t${time}\t${count}\t${lotId}\t${pouchLot}`;
             let detailReason = '';
 
             if (isFailed) {
-                // 1. Cek dulu apakah ada baris NOTE / Keterangan
                 let matchNote = text.match(/(?:^|\n)[\s*•_–.-]*NOTE\s*[:=–-]?\s*(.*?)(?=\s*(?:\n\s*(?:Cc\b|PIC\b|Status\b|Total\b)|$))/is);
                 if (matchNote && matchNote[1].trim()) {
                     detailReason = matchNote[1].split('\n')[0].trim();
                 } else {
-                    // 2. Jika tidak ada NOTE, ambil dari keterangan di samping baris Status
                     let matchDetail = statusRaw.match(/^[^(]*\((.*)\)[^)]*$/);
                     if (matchDetail) {
                         detailReason = matchDetail[1].trim();
@@ -814,7 +835,7 @@ return `="${line}"\t${date}\t${time}\t${count}\t${lotId}\t${pouchLot}`;
             return results.join('\n');
         }
 
-        // 5. FORMAT TOP 5 (Line \t Root Cause \t Adjustment)
+        // 5. FORMAT TOP 5
         function formatTop5(text) {
             let lineMatch = text.match(/(?:Line\s*ID|Line|PKG)\s*[:=–-]?\s*([0-9]+-[0-9]+)/i);
             let line = lineMatch ? lineMatch[1] : '';
@@ -850,17 +871,14 @@ return `="${line}"\t${date}\t${time}\t${count}\t${lotId}\t${pouchLot}`;
                 }
             }
 
-            // Langsung daftar item tanpa tulisan "Action :"
             let formattedAdjustment = rawActions.map(act => `- ${act}`).join('\n');
             
-            // Jarak 1 enter kosong sebelum PIC
             if (pic) {
                 formattedAdjustment += (formattedAdjustment ? '\n\n' : '') + `PIC : ${pic}`;
             }
 
             let safeAdjustment = `"${formattedAdjustment.replace(/"/g, '""')}"`;
 
-            // Prefix ="line" khusus Top 5 agar tidak menjadi tanggal di Excel
             return `="${line}"\t${rootCause}\t${safeAdjustment}`;
         }
 
@@ -927,32 +945,27 @@ return `="${line}"\t${date}\t${time}\t${count}\t${lotId}\t${pouchLot}`;
             copyOutput();
         }
 
-        // FITUR AUTO-DETECT MODE SAAT INPUT / PASTE
         function autoDetectMode(text) {
             if (!text || text.trim().length < 4) return;
             
             let clean = text.replace(/\u00A0/g, ' ');
             let lower = clean.toLowerCase();
 
-            // 1. Prioritas Rework
             if (lower.includes('cell id') || lower.includes('cellid') || /(?:^|\n)[^\w\n]*ng\s*[:=–-]/i.test(clean)) {
                 if (currentMode !== 'rework') setMode('rework', true);
                 return;
             }
 
-            // 2. Prioritas Crack
             if (lower.includes('crack') || lower.includes('pinhole') || (lower.includes('lot id') && lower.includes('pouch lot'))) {
                 if (currentMode !== 'crack') setMode('crack', true);
                 return;
             }
 
-            // 3. Prioritas Wrinkle
             if ((lower.includes('pouch id') || lower.includes('pouch lot')) && (lower.includes('count') || /\b\d{1,2}[.:]\d{2}\b/.test(clean))) {
                 if (currentMode !== 'excel') setMode('excel', true);
                 return;
             }
 
-            // 4. Prioritas Losskey / Top 5 (Downtime Bot)
             if (
                 lower.includes('downtime bot') || 
                 lower.includes('countermeasure') || 
