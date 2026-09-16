@@ -685,11 +685,15 @@ function formatExcel(fullText) {
             return rows.join('\n');
         }
 
-        function matchKlasifikasiNG(fullText, ngRaw) {
+        // FUNGSI KLASIFIKASI NG NAME (REWORK) - DIPERBAIKI
+function matchKlasifikasiNG(fullText, ngRaw) {
     let cleanFull = (fullText || '').replace(/\u00A0/g, ' ');
     let raw = (ngRaw || '').replace(/\u00A0/g, ' ');
+    
+    // Bersihkan teks dalam kurung seperti (Overkill), (Foreign Material), dll
     let cleanedNg = raw.replace(/\((.*?)\)/gi, '').trim();
-    let ng_lower = cleanedNg.toLowerCase();
+    // Ubah underscore (_) atau tanda minus (-) menjadi spasi agar Lead_R terbaca sebagai Lead R
+    let ng_lower = cleanedNg.replace(/[_-]/g, ' ').toLowerCase();
     
     // Deteksi tanda (+) atau [+] atau (-) atau [-]
     let sign = '-';
@@ -741,15 +745,19 @@ function formatExcel(fullText) {
         return 'Short Contact';
     }
 
+    // Lead Film
     if (/lead\s*fi?lm\d*/i.test(ng_lower) || (ng_lower.includes('lead') && ng_lower.includes('film'))) {
         return `Lead Film (${sign})`;
     }
+
+    // Lead R & Lead L (Aman dari spasi maupun underscore seperti Lead_R / Lead-R)
     if (/lead\s*r(?![a-z])/i.test(ng_lower)) {
         return `Lead R (${sign})`;
     }
     if (/lead\s*l(?![a-z])/i.test(ng_lower)) {
         return `Lead L (${sign})`;
     }
+
     if (ng_lower.includes('tab burr') || ng_lower.includes('burr')) {
         return `Tab Burr (${sign})`;
     }
@@ -768,7 +776,9 @@ function formatExcel(fullText) {
     if (ng_lower.includes('gap')) {
         return `GAP (${sign})`;
     }
-    if (ng_lower.includes('dimension') || raw.toLowerCase().includes('overkill')) {
+
+    // Hanya masuk ke Dimension Overkill jika memang kata utamanya menyebut "dimension" atau murni hanya kata "overkill"
+    if (ng_lower.includes('dimension') || ng_lower === 'overkill' || ng_lower.startsWith('overkill')) {
         return `Dimension Overkill (${sign})`;
     }
 
