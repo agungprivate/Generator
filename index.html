@@ -762,78 +762,117 @@
             return raw;
         }
 
-        function formatRework(text) {
-            text = text.replace(/\u00A0/g, ' ');
-            let lineMatch = text.match(/(?:#|Line|PKG)?\s*([0-9]+-[0-9]+)/i);
-            let line = lineMatch ? `PKG ${lineMatch[1]}` : '';
+       // 4. FORMAT REWORK (SUPPORT BATCH PESAN WA & MULTIPLE CELL ID)
+function formatRework(fullText) {
+    if (!fullText) return '';
 
-            let ngRaw = extractBlock('NG', text);
-            if (!ngRaw) {
-                let matchNg = text.match(/(?:^|\n)[\s*•_–.-]*NG\s*[:=–-]?\s*(.*)/i);
-                if (matchNg) ngRaw = cleanText(matchNg[1]);
-            }
-            let ngName = matchKlasifikasiNG(text, ngRaw);
+    // Bersihkan non-breaking space
+    fullText = fullText.replace(/\u00A0/g, ' ');
 
-            let section = 'TW';
-            let lowerText = text.toLowerCase();
-            let lowerNg = (ngName || '').toLowerCase();
+    // 1. PISAHKAN BANYAK LAPORAN SEKALIGUS (BATCH SPLITTING)
+    // Mendukung pemisahan jika ada header WA ([20:26...]), [Rework], atau tanda #line
+    let blocks = [];
+    if (/\[\d{1,2}[:.]\d{2}[^\]]*\]/i.test(fullText)) {
+        // Jika copas langsung dari WA Web dengan timestamp misal: [20:26, 16/09/2026]
+        blocks = fullText
+            .split(/(?=\[\d{1,2}[:.]\d{2}[^\]]*\])/i)
+            .map(b => b.trim())
+            .filter(b => b.length > 0);
+    } else if (/\[(?:Rework|Problem Report)\]/i.test(fullText)) {
+        blocks = fullText
+            .split(/(?=\[(?:Rework|Problem Report)\])/i)
+            .map(b => b.trim())
+            .filter(b => b.length > 0);
+    } else {
+        // Fallback jika tidak ada timestamp WA: potong berdasarkan #PKG / Line: / #4-2
+        blocks = fullText
+            .split(/(?=(?:^|\n)(?:#\s*PKG|PKG\s*\d+-\d+|Line\s*[:=–-]|#(?:[0-9]+-[0-9]+)))/i)
+            .map(b => b.trim())
+            .filter(b => b.length > 0);
+    }
 
-            if (lowerText.includes('cell assy') || lowerText.includes('ca') || lowerNg.includes('sealing vision') || lowerNg.includes('lead vision')) {
-                section = 'CA';
-            } else if (/\bEL\b|Filling/i.test(text) || lowerNg.includes('weight') || lowerNg.includes('barcode') || lowerNg.includes('ir contact') || lowerNg.includes('lead contact') || lowerNg.includes('v sealing')) {
-                section = 'EL';
-            } else {
-                section = 'TW';
-            }
+    if (blocks.length === 0) blocks = [fullText];
 
-            let cellIdRaw = extractBlock('Cell ID', text) || extractBlock('CellID', text) || extractBlock('Cell', text);
-            if (!cellIdRaw) {
-                let matchCell = text.match(/(?:Cell\s*ID|CellID)\s*[:=–-]?\s*([A-Za-z0-9_-]+)/i);
-                if (matchCell) cellIdRaw = cleanText(matchCell[1]);
-            }
+    let allResults = [];
 
-            let statusRaw = extractBlock('Status', text);
-            let isFailed = /fail|❌|gagal|\bNG\b/i.test(statusRaw);
-            let status = isFailed ? 'F' : 'Y';
+    // 2. PROSES TIAP BLOK LAPORAN
+    blocks.forEach(text => {
+        let lineMatch = text.match(/(?:#|Line|PKG)?\s*([0-9]+-[0-9]+)/i);
+        let line = lineMatch ? `PKG ${lineMatch[1]}` : '';
 
-            let reason = '';
-            let detailReason = '';
-
-            if (isFailed) {
-                let matchNote = text.match(/(?:^|\n)[\s*•_–.-]*NOTE\s*[:=–-]?\s*(.*?)(?=\s*(?:\n\s*(?:Cc\b|PIC\b|Status\b|Total\b)|$))/is);
-                if (matchNote && matchNote[1].trim()) {
-                    detailReason = matchNote[1].split('\n')[0].trim();
-                } else {
-                    let matchDetail = statusRaw.match(/^[^(]*\((.*)\)[^)]*$/);
-                    if (matchDetail) {
-                        detailReason = matchDetail[1].trim();
-                    } else {
-                        detailReason = statusRaw.replace(/fail(ed)?|❌|gagal|status|[:=]/gi, '').trim();
-                    }
-                }
-                reason = '';
-            }
-
-            let picRaw = extractBlock('PIC', text);
-            let pic = formatPicNames(picRaw);
-
-            let lotId = '';
-
-            let cellIds = cellIdRaw
-                .split(/[,;\n&]+|\b(?:dan|and)\b/i)
-                .map(id => id.trim())
-                .filter(id => id.length > 0);
-            
-            if (cellIds.length === 0) cellIds = [''];
-
-            let results = cellIds.map(cellId => {
-                let pkgId = (section === 'EL') ? cellId : '';
-                let stkId = (section === 'TW' || section === 'CA') ? cellId : '';
-                return `${line}\t${section}\t${ngName}\t${lotId}\t${pkgId}\t${stkId}\t${status}\t${reason}\t${detailReason}\t${pic}`;
-            });
-
-            return results.join('\n');
+        let ngRaw = extractBlock('NG', text);
+        if (!ngRaw) {
+            let matchNg = text.match(/(?:^|\n)[\s*•_–.-]*NG\s*[:=–-]?\s*(.*)/i);
+            if (matchNg) ngRaw = cleanText(matchNg[1]);
         }
+        let ngName = matchKlasifikasiNG(text, ngRaw);
+
+        let section = 'TW';
+        let lowerText = text.toLowerCase();
+        let lowerNg = (ngName || '').toLowerCase();
+
+        if (lowerText.includes('cell assy') || lowerText.includes('ca') || lowerNg.includes('sealing vision') || lowerNg.includes('lead vision')) {
+            section = 'CA';
+        } else if (/\bEL\b|Filling/i.test(text) || lowerNg.includes('weight') || lowerNg.includes('barcode') || lowerNg.includes('ir contact') || lowerNg.includes('lead contact') || lowerNg.includes('v sealing')) {
+            section = 'EL';
+        } else {
+            section = 'TW';
+        }
+
+        let cellIdRaw = extractBlock('Cell ID', text) || extractBlock('CellID', text) || extractBlock('Cell', text);
+        if (!cellIdRaw) {
+            let matchCell = text.match(/(?:Cell\s*ID|CellID)\s*[:=–-]?\s*([A-Za-z0-9_,\s-]+)/i);
+            if (matchCell) cellIdRaw = cleanText(matchCell[1]);
+        }
+
+        let statusRaw = extractBlock('Status', text);
+        let isFailed = /fail|❌|gagal|\bNG\b/i.test(statusRaw);
+        let status = isFailed ? 'F' : 'Y';
+
+        let reason = '';
+        let detailReason = '';
+
+        if (isFailed) {
+            let matchNote = text.match(/(?:^|\n)[\s*•_–.-]*NOTE\s*[:=–-]?\s*(.*?)(?=\s*(?:\n\s*(?:Cc\b|PIC\b|Status\b|Total\b)|$))/is);
+            if (matchNote && matchNote[1].trim()) {
+                detailReason = matchNote[1].split('\n')[0].trim();
+            } else {
+                let matchDetail = statusRaw.match(/^[^(]*\((.*)\)[^)]*$/);
+                if (matchDetail) {
+                    detailReason = matchDetail[1].trim();
+                } else {
+                    detailReason = statusRaw.replace(/fail(ed)?|❌|gagal|status|[:=]/gi, '').trim();
+                }
+            }
+            reason = '';
+        }
+
+        let picRaw = extractBlock('PIC', text);
+        // Hapus keterangan tambahan dalam kurung seperti (verify) pada PIC
+        if (picRaw) {
+            picRaw = picRaw.replace(/\([^)]*\)/g, '').trim();
+        }
+        let pic = formatPicNames(picRaw);
+
+        let lotId = extractBlock('Lot ID', text) || extractBlock('LotID', text) || '';
+
+        // Pecah jika dalam 1 laporan ada banyak Cell ID (koma, enter, spasi, titik koma)
+        let cellIds = cellIdRaw
+            ? cellIdRaw.split(/[,;\n&]+|\b(?:dan|and)\b/i).map(id => id.trim()).filter(id => id.length > 0)
+            : [];
+        
+        if (cellIds.length === 0) cellIds = [''];
+
+        // Masukkan setiap baris ke allResults
+        cellIds.forEach(cellId => {
+            let pkgId = (section === 'EL') ? cellId : '';
+            let stkId = (section === 'TW' || section === 'CA') ? cellId : '';
+            allResults.push(`${line}\t${section}\t${ngName}\t${lotId}\t${pkgId}\t${stkId}\t${status}\t${reason}\t${detailReason}\t${pic}`);
+        });
+    });
+
+    return allResults.join('\n');
+}
 
         // 5. FORMAT TOP 5
         function formatTop5(text) {
