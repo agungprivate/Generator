@@ -639,8 +639,8 @@
             let lotId = extractBlock('Lot ID', text) || extractBlock('LotID', text) || extractBlock('Lot', text);
             let pouchLot = extractBlock('Pouch Lot', text) || extractBlock('Pouch ID', text) || extractBlock('Lot Pouch', text);
 
-            // Kolom Line polos apa adanya
-            return `${line}\t${date}\t${time}\t${count}\t${lotId}\t${pouchLot}`;
+            // Bungkus dengan ="..." agar Excel membacanya murni sebagai teks, bukan tanggal
+return `="${line}"\t${date}\t${time}\t${count}\t${lotId}\t${pouchLot}`;
         }
 
    // FUNGSI KLASIFIKASI NG NAME (REWORK)
