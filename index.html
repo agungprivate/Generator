@@ -502,68 +502,78 @@
             return result;
         }
 
-        // 2. FORMAT WRINKLE (BATCH SUPPORT & LINE POLOS)
-        function formatExcel(fullText) {
-            if (!fullText) return '';
+       // 2. FORMAT WRINKLE (FIX BATCH & HEADER WHATSAPP)
+function formatExcel(fullText) {
+    if (!fullText) return '';
 
-            let blocks = [];
-            if (/\[Problem Report\]/i.test(fullText)) {
-                blocks = fullText
-                    .split(/(?=\[Problem Report\])/i)
-                    .map(b => b.trim())
-                    .filter(b => b.length > 0);
-            } else {
-                blocks = fullText
-                    .split(/(?=(?:^|\n)(?:Shift\s*\d+\s*)?(?:Line|PKG)\s*[:=–-])/i)
-                    .map(b => b.trim())
-                    .filter(b => b.length > 0);
-            }
+    // Bersihkan non-breaking space
+    fullText = fullText.replace(/\u00A0/g, ' ');
 
-            if (blocks.length === 0) blocks = [fullText];
+    let blocks = [];
+    if (/\[Problem Report\]/i.test(fullText)) {
+        // Buang teks sampah sebelum [Problem Report] pertama (misal timestamp WA baris 1)
+        let firstIndex = fullText.search(/\[Problem Report\]/i);
+        let cleanedFullText = fullText.substring(firstIndex);
 
-            let allRows = [];
+        blocks = cleanedFullText
+            .split(/(?=\[Problem Report\])/i)
+            .map(b => b.trim())
+            .filter(b => b.length > 0);
+    } else {
+        blocks = fullText
+            .split(/(?=(?:^|\n)(?:Shift\s*\d+\s*)?(?:Line|PKG)\s*[:=–-])/i)
+            .map(b => b.trim())
+            .filter(b => b.length > 0);
+    }
 
-            blocks.forEach(text => {
-                let line = extractBlock('Line', text);
-                if (!line) {
-                    let matchLine = text.match(/(?:Line|PKG)?\s*[:=–-]?\s*(PKG\s*[0-9]+-[0-9]+|[0-9]+-[0-9]+)/i);
-                    if (matchLine) line = matchLine[1].toUpperCase();
-                }
+    if (blocks.length === 0) blocks = [fullText];
 
-                let problem = extractBlock('Problem', text);
+    let allRows = [];
 
-                let timeRaw = extractBlock('TIME', text) || extractBlock('Jam', text) || extractBlock('Waktu', text);
-                if (!timeRaw) {
-                    let matchTimes = text.match(/\b\d{1,2}[.:]\d{2}\b/g);
-                    if (matchTimes) timeRaw = matchTimes.join(' & ');
-                }
-
-                let pouchId = extractBlock('Pouch ID', text) || extractBlock('Pouch Lot', text) || extractBlock('Pouch', text) || extractBlock('Lot Pouch', text);
-                let countRaw = extractBlock('Count', text);
-                
-                let picRaw = extractBlock('PIC', text);
-                let pic = formatPicNames(picRaw);
-
-                let splitRegex = /[,\/;&]+|\b(?:dan|and)\b/i;
-                
-                let times = timeRaw
-                    ? timeRaw.split(splitRegex).map(t => t.trim().replace(/(\d{1,2})\.(\d{2})/, '$1:$2')).filter(t => t.length > 0)
-                    : [];
-                let counts = countRaw
-                    ? countRaw.split(splitRegex).map(c => c.trim().replace(/\./g, '')).filter(c => c.length > 0)
-                    : [];
-
-                let maxLen = Math.max(times.length, counts.length, 1);
-
-                for (let i = 0; i < maxLen; i++) {
-                    let t = times[i] !== undefined ? times[i] : (times[0] || '');
-                    let c = counts[i] !== undefined ? counts[i] : (counts[0] || '');
-                    allRows.push(`${line}\t${problem}\t${t}\t${pouchId}\t${c}\t${pic}`);
-                }
-            });
-
-            return allRows.join('\n');
+    blocks.forEach(text => {
+        let line = extractBlock('Line', text);
+        if (!line) {
+            let matchLine = text.match(/(?:^|\n)\s*(?:Line|PKG)?\s*[:=–-]?\s*(PKG\s*[0-9]+-[0-9]+|[0-9]+-[0-9]+)/i);
+            if (matchLine) line = matchLine[1].toUpperCase();
         }
+
+        let problem = extractBlock('Problem', text);
+
+        let timeRaw = extractBlock('TIME', text) || extractBlock('Jam', text) || extractBlock('Waktu', text);
+        if (!timeRaw) {
+            let matchTimes = text.match(/\b\d{1,2}[.:]\d{2}\b/g);
+            if (matchTimes) timeRaw = matchTimes.join(' & ');
+        }
+
+        let pouchId = extractBlock('Pouch ID', text) || extractBlock('Pouch Lot', text) || extractBlock('Pouch', text) || extractBlock('Lot Pouch', text);
+        let countRaw = extractBlock('Count', text);
+        
+        let picRaw = extractBlock('PIC', text);
+        if (picRaw) {
+            picRaw = picRaw.replace(/\([^)]*\)/g, '').trim();
+        }
+        let pic = formatPicNames(picRaw);
+
+        let splitRegex = /[,\/;&]+|\b(?:dan|and)\b/i;
+        
+        let times = timeRaw
+            ? timeRaw.split(splitRegex).map(t => t.trim().replace(/(\d{1,2})\.(\d{2})/, '$1:$2')).filter(t => t.length > 0)
+            : [];
+        let counts = countRaw
+            ? countRaw.split(splitRegex).map(c => c.trim().replace(/\./g, '')).filter(c => c.length > 0)
+            : [];
+
+        let maxLen = Math.max(times.length, counts.length, 1);
+
+        for (let i = 0; i < maxLen; i++) {
+            let t = times[i] !== undefined ? times[i] : (times[0] || '');
+            let c = counts[i] !== undefined ? counts[i] : (counts[0] || '');
+            allRows.push(`${line}\t${problem}\t${t}\t${pouchId}\t${c}\t${pic}`);
+        }
+    });
+
+    return allRows.join('\n');
+}
 
         // 3.A FORMAT CRACK - IMAGE (NAMING) - SUPPORT MULTIPLE DATA
         function formatVisionNaming(text) {
