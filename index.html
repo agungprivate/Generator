@@ -707,15 +707,15 @@ function matchKlasifikasiNG(fullText, ngRaw) {
     }
 
     // --- PROSES KLASIFIKASI PRIORITAS TINGGI ---
-    if (ng_lower === 'aw' || /\baw\b/i.test(ng_lower) || ng_lower.includes('weight after') || ng_lower.includes('after e/f') || ng_lower.includes('after ef')) {
-        return 'Weight After E/F';
-    }
-    if (ng_lower.includes('weight before') || ng_lower.includes('before e/f') || ng_lower.includes('before ef')) {
-        return 'Weight Before E/F';
-    }
+    if (ng_lower.includes('weight before') || ng_lower.includes('before weight') || ng_lower.includes('before e/f') || ng_lower.includes('before ef')) {
+    return 'Weight Before E/F';
+}
+    if (ng_lower === 'aw' || /\baw\b/i.test(ng_lower) || ng_lower.includes('weight after') || ng_lower.includes('after weight') || ng_lower.includes('after e/f') || ng_lower.includes('after ef')) {
+    return 'Weight After E/F';
+}
     if (ng_lower.includes('ir bcr') || ng_lower.includes('barcode read') || ng_lower.includes('read ng') || ng_lower.includes('bcr ng')) {
-        return 'Barcode Read NG';
-    }
+    return 'Barcode Read NG';
+}
     if (ng_lower.includes('it validation') || ng_lower.includes('barcode it')) {
         return 'Barcode IT Validation';
     }
