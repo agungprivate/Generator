@@ -446,61 +446,94 @@
         }
 
         // 1. FORMAT LOSSKEY
-        function formatDowntime(text) {
-            let section = extractBlock('Section', text);
-            let location = extractBlock('Location', text);
-            let problem = extractBlock('Problem', text);
-            let cause = extractBlock('Cause', text);
-            
-            let picRaw = extractBlock('PIC', text);
-            let pic = formatPicNames(picRaw);
+       function formatDowntime(text) {
+    let section = extractBlock('Section', text);
+    let location = extractBlock('Location', text);
+    let problem = extractBlock('Problem', text);
+    let cause = extractBlock('Cause', text);
+    
+    let picRaw = extractBlock('PIC', text);
+    let pic = formatPicNames(picRaw);
 
-            let matchPart = text.match(/(?:^|\n)[\s*_-]*Part Replacement[\s*_-]*[:=–-]?\s*(.*?)(?=\s*(?:\n|\bPIC\b|\bResult\b|\bStatus\b|\/\/|$))/i);
-            let partReplacement = matchPart ? cleanText(matchPart[1]) : '';
+    let matchPart = text.match(/(?:^|\n)[\s*_-]*Part Replacement[\s*_-]*[:=–-]?\s*(.*?)(?=\s*(?:\n|\bPIC\b|\bResult\b|\bStatus\b|\/\/|$))/i);
+    let partReplacement = matchPart ? cleanText(matchPart[1]) : '';
 
-            let rawActions = [];
-            let lines = text.split('\n');
-            let isAction = false;
+    let lines = text.split('\n');
+    let isAction = false;
+    let actionOutput = [];
+    let currentNumber = 1;
 
-            for (let line of lines) {
-                let trimmed = line.trim();
-                if (/^[\s*_-]*(Countermeasure|Action)[\s*_-]*[:=]?/i.test(trimmed)) {
-                    isAction = true;
-                    let afterHeader = trimmed.replace(/^[\s*_-]*(Countermeasure|Action)[\s*_-]*[:=]?/i, '').trim();
-                    if (afterHeader.length > 0) {
-                        let clean = afterHeader.replace(/^(\d+[.)]|[-*•])\s*/, '').replace(/[*_]/g, '').trim();
-                        if (clean) rawActions.push(clean);
+    for (let line of lines) {
+        let trimmed = line.trim();
+        
+        // Mulai parsing saat menemukan header Action / Countermeasure
+        if (/^[\s*_-]*(Countermeasure|Action)[\s*_-]*[:=]?/i.test(trimmed)) {
+            isAction = true;
+            // Cek jika ada teks langsung di samping header "Action: xxx"
+            let afterHeader = trimmed.replace(/^[\s*_-]*(Countermeasure|Action)[\s*_-]*[:=]?/i, '').trim();
+            if (afterHeader.length > 0) {
+                // Periksa apakah ini bullet atau sub-judul
+                if (/^(\d+[.)]|[-*•])\s+/.test(afterHeader)) {
+                    let clean = afterHeader.replace(/^(\d+[.)]|[-*•])\s*/, '').replace(/[*_]/g, '').trim();
+                    if (clean) {
+                        actionOutput.push(`${currentNumber}. ${clean}`);
+                        currentNumber++;
                     }
-                    continue;
+                } else {
+                    actionOutput.push(afterHeader);
                 }
-                if (isAction) {
-                    if (/^[\s*_-]*(Result|Part Replacement|PIC|Qty Defect|Start Time|End Time|Duration|Stop Status|Status|Note|Risk Range)[\s*_-]*[:=]/i.test(trimmed)) {
-                        isAction = false;
-                        continue;
-                    }
-                    if (trimmed.length > 0) {
-                        let cleanAction = trimmed.replace(/^(\d+[.)]|[-*•])\s*/, '').replace(/[*_]/g, '').trim();
-                        if (cleanAction) rawActions.push(cleanAction);
-                    }
-                }
             }
-
-            let formattedActions = rawActions.map((act, idx) => `${idx + 1}. ${act}`);
-
-            let result = `${section || 'Section'} // ${location || 'Location'} // ${problem || 'Problem'} //\n`;
-            if (cause && cause !== '-') {
-                result += `${cause} //\n`;
-            }
-            result += `Action :\n`;
-            result += (formattedActions.length > 0 ? formattedActions.join('\n') : '');
-            
-            if (partReplacement && partReplacement !== '-' && !/^[:\s–-]+$/.test(partReplacement)) {
-                result += `\n\nPart Replacement: ${partReplacement}`;
-            }
-            
-            result += `\n//\nPIC : ${pic || '-'}`;
-            return result;
+            continue;
         }
+
+        if (isAction) {
+            // Berhenti jika sudah memasuki field berikutnya
+            if (/^[\s*_-]*(Result|Part Replacement|PIC|Qty Defect|Start Time|End Time|Duration|Stop Status|Status|Note|Risk Range)[\s*_-]*[:=]/i.test(trimmed)) {
+                isAction = false;
+                continue;
+            }
+
+            if (trimmed.length > 0) {
+                // Cek apakah baris DIAWALI bullet asli: - , * , • , atau angka seperti 1. , 1)
+                // Catatan: Baris yang diakhiri tanda ':' (seperti "- Check Point Tab Torn :") 
+                // seringkali adalah sub-header meskipun diawali strip.
+                const hasBullet = /^(\d+[.)]|[-*•])\s+/.test(trimmed);
+                const isSubHeaderWithColon = trimmed.endsWith(':') && trimmed.length < 50;
+
+                if (hasBullet && !isSubHeaderWithColon) {
+                    // INI AKSI (LANGKAH TINDAKAN) -> Beri nomor urut
+                    let cleanAction = trimmed.replace(/^(\d+[.)]|[-*•])\s*/, '').replace(/[*_]/g, '').trim();
+                    if (cleanAction) {
+                        actionOutput.push(`${currentNumber}. ${cleanAction}`);
+                        currentNumber++;
+                    }
+                } else {
+                    // INI SUB-HEADER / TEKS DI LUAR BULLET (misal: + NG 3 Ea, Step 1:, Catatan, dll)
+                    // Tidak diberi nomor dan otomatis mereset counter numbering
+                    let headerText = trimmed.replace(/^[-*•]\s*/, '').trim(); // bersihkan jika ada bullet nyasar di subheader
+                    actionOutput.push(`\n${headerText}`);
+                    currentNumber = 1; // Reset numbering untuk blok berikutnya
+                }
+            }
+        }
+    }
+
+    let result = `${section || 'Section'} // ${location || 'Location'} // ${problem || 'Problem'} //\n`;
+    if (cause && cause !== '-') {
+        result += `${cause} //\n`;
+    }
+    result += `Action :`;
+    if (actionOutput.length > 0) {
+        result += `\n` + actionOutput.join('\n').trim();
+    }
+    
+    if (partReplacement && partReplacement !== '-' && !/^[:\s–-]+$/.test(partReplacement)) {
+        result += `\n\nPart Replacement: ${partReplacement}`;
+    }
+    
+    result += `\n//\nPIC : ${pic || '-'}`;
+    return result;
+}
 
      // FORMAT WRINKLE (FIX BARIS KOSONG & KURUNG HILANG)
 function formatExcel(fullText) {
