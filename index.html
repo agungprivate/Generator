@@ -502,26 +502,26 @@
             return result;
         }
 
-       // 2. FORMAT WRINKLE (FIX BATCH & HEADER WHATSAPP)
+     // FORMAT WRINKLE (FIX BARIS KOSONG & KURUNG HILANG)
 function formatExcel(fullText) {
     if (!fullText) return '';
 
-    // Bersihkan non-breaking space
     fullText = fullText.replace(/\u00A0/g, ' ');
 
     let blocks = [];
-    if (/\[Problem Report\]/i.test(fullText)) {
-        // Buang teks sampah sebelum [Problem Report] pertama (misal timestamp WA baris 1)
-        let firstIndex = fullText.search(/\[Problem Report\]/i);
-        let cleanedFullText = fullText.substring(firstIndex);
+    
+    // 1. Tangani baik [Problem Report] lengkap maupun Problem Report] tanpa kurung depan
+    if (/\[?Problem Report\]?/i.test(fullText)) {
+        let firstIndex = fullText.search(/\[?Problem Report\]?/i);
+        let cleanedFullText = firstIndex !== -1 ? fullText.substring(firstIndex) : fullText;
 
         blocks = cleanedFullText
-            .split(/(?=\[Problem Report\])/i)
+            .split(/(?=\[?Problem Report\]?)/i)
             .map(b => b.trim())
             .filter(b => b.length > 0);
     } else {
         blocks = fullText
-            .split(/(?=(?:^|\n)(?:Shift\s*\d+\s*)?(?:Line|PKG)\s*[:=–-])/i)
+            .split(/(?=(?:^|\n)\s*(?:Shift\s*\d+\s*)?(?:Line|PKG)\s*[:=–-])/i)
             .map(b => b.trim())
             .filter(b => b.length > 0);
     }
@@ -536,6 +536,9 @@ function formatExcel(fullText) {
             let matchLine = text.match(/(?:^|\n)\s*(?:Line|PKG)?\s*[:=–-]?\s*(PKG\s*[0-9]+-[0-9]+|[0-9]+-[0-9]+)/i);
             if (matchLine) line = matchLine[1].toUpperCase();
         }
+
+        // PENGAMAN: Jika blok teks sampah tidak memuat nomor Line valid, abaikan
+        if (!line) return;
 
         let problem = extractBlock('Problem', text);
 
@@ -572,7 +575,7 @@ function formatExcel(fullText) {
         }
     });
 
-    return allRows.join('\n');
+    return allRows.join('\n').trim();
 }
 
         // 3.A FORMAT CRACK - IMAGE (NAMING) - SUPPORT MULTIPLE DATA
