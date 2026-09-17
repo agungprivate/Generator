@@ -939,13 +939,17 @@ function formatRework(fullText) {
 
     return allResults.join('\n');
 }
-
         // 5. FORMAT TOP 5
         function formatTop5(text) {
             let lineMatch = text.match(/(?:Line\s*ID|Line|PKG)\s*[:=–-]?\s*([0-9]+-[0-9]+)/i);
             let line = lineMatch ? lineMatch[1] : '';
 
             let rootCause = extractBlock('Cause', text) || extractBlock('Root Cause', text);
+            // Huruf pertama otomatis kapital
+            if (rootCause) {
+                rootCause = rootCause.charAt(0).toUpperCase() + rootCause.slice(1);
+            }
+
             let picRaw = extractBlock('PIC', text);
             let pic = formatPicNames(picRaw);
 
