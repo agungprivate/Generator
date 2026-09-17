@@ -1017,39 +1017,53 @@ function formatRework(fullText) {
             copyOutput();
         }
 
-        function autoDetectMode(text) {
-            if (!text || text.trim().length < 4) return;
-            
-            let clean = text.replace(/\u00A0/g, ' ');
-            let lower = clean.toLowerCase();
+       function autoDetectMode(text) {
+    if (!text || text.trim().length < 4) return;
+    
+    let clean = text.replace(/\u00A0/g, ' ');
+    let lower = clean.toLowerCase();
 
-            if (lower.includes('cell id') || lower.includes('cellid') || /(?:^|\n)[^\w\n]*ng\s*[:=–-]/i.test(clean)) {
-                if (currentMode !== 'rework') setMode('rework', true);
-                return;
-            }
+    // 1. Prioritaskan Losskey / Downtime
+    const hasDowntimeMarkers = 
+        lower.includes('downtime bot') || 
+        lower.includes('countermeasure') || 
+        /section\s*[:=–-]/i.test(clean) ||
+        /location\s*[:=–-]/i.test(clean) ||
+        (lower.includes('start time') && lower.includes('qty defect')) ||
+        (lower.includes('start time') && lower.includes('duration'));
 
-            if (lower.includes('crack') || lower.includes('pinhole') || (lower.includes('lot id') && lower.includes('pouch lot'))) {
-                if (currentMode !== 'crack') setMode('crack', true);
-                return;
-            }
-
-            if ((lower.includes('pouch id') || lower.includes('pouch lot')) && (lower.includes('count') || /\b\d{1,2}[.:]\d{2}\b/.test(clean))) {
-                if (currentMode !== 'excel') setMode('excel', true);
-                return;
-            }
-
-            if (
-                lower.includes('downtime bot') || 
-                lower.includes('countermeasure') || 
-                (lower.includes('start time') && lower.includes('duration')) ||
-                (lower.includes('section:') && lower.includes('location:'))
-            ) {
-                if (currentMode !== 'top5' && currentMode !== 'downtime') {
-                    setMode('downtime', true);
-                }
-                return;
-            }
+    if (hasDowntimeMarkers) {
+        if (currentMode !== 'top5' && currentMode !== 'downtime') {
+            setMode('downtime', true);
         }
+        return;
+    }
+
+    // 2. Deteksi Rework (khusus laporan cell defect / rework riil)
+    const isExplicitRework = 
+        lower.includes('cell id') || 
+        lower.includes('cellid') || 
+        /\[rework\]/i.test(clean) ||
+        /(?:^|\n)\s*rework\b/i.test(clean) ||
+        /(?:^|\n)\s*ng\s*[:=–-]\s*(?!.*\bea\b)/i.test(clean); // Hindari NG : 1 Ea
+
+    if (isExplicitRework) {
+        if (currentMode !== 'rework') setMode('rework', true);
+        return;
+    }
+
+    // 3. Deteksi Crack
+    if (lower.includes('crack') || lower.includes('pinhole') || (lower.includes('lot id') && lower.includes('pouch lot'))) {
+        if (currentMode !== 'crack') setMode('crack', true);
+        return;
+    }
+
+    // 4. Deteksi Wrinkle
+    if ((lower.includes('pouch id') || lower.includes('pouch lot')) && (lower.includes('count') || /\b\d{1,2}[.:]\d{2}\b/.test(clean))) {
+        if (currentMode !== 'excel') setMode('excel', true);
+        return;
+    }
+}
 
         const inputArea = document.getElementById('inputText');
         if (inputArea) {
