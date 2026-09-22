@@ -939,57 +939,66 @@ function formatRework(fullText) {
 
     return allResults.join('\n');
 }
-        // 5. FORMAT TOP 5
-        function formatTop5(text) {
-            let lineMatch = text.match(/(?:Line\s*ID|Line|PKG)\s*[:=–-]?\s*([0-9]+-[0-9]+)/i);
-            let line = lineMatch ? lineMatch[1] : '';
+        // FORMAT TOP 5
+function formatTop5(text) {
+    let lineMatch = text.match(/(?:Line\s*ID|Line|PKG)\s*[:=–-]?\s*([0-9]+-[0-9]+)/i);
+    let line = lineMatch ? lineMatch[1] : '';
 
-            let rootCause = extractBlock('Cause', text) || extractBlock('Root Cause', text);
-            // Huruf pertama otomatis kapital
-            if (rootCause) {
-                rootCause = rootCause.charAt(0).toUpperCase() + rootCause.slice(1);
+    let rootCause = extractBlock('Cause', text) || extractBlock('Root Cause', text);
+    
+    // Cegah Cause bocor jika bernilai strip '-' atau kosong murni
+    if (!rootCause || rootCause.trim() === '-' || /^action\b/i.test(rootCause.trim())) {
+        rootCause = '-';
+    } else {
+        rootCause = rootCause.charAt(0).toUpperCase() + rootCause.slice(1);
+    }
+
+    let picRaw = extractBlock('PIC', text);
+    let pic = formatPicNames(picRaw);
+
+    let rawActions = [];
+    let lines = text.split('\n');
+    let isAction = false;
+
+    for (let l of lines) {
+        let trimmed = l.trim();
+        
+        // Membaca awal Action / Countermeasure
+        if (/^[\s*_-]*(Countermeasure|Action|Adjustment)[\s*_-]*[:=]?/i.test(trimmed)) {
+            isAction = true;
+            let afterHeader = trimmed.replace(/^[\s*_-]*(Countermeasure|Action|Adjustment)[\s*_-]*[:=]?/i, '').trim();
+            if (afterHeader.length > 0) {
+                let clean = afterHeader.replace(/^(\d+[.)]|[-*•])\s*/, '').replace(/[*_]/g, '').trim();
+                if (clean) rawActions.push(clean);
             }
-
-            let picRaw = extractBlock('PIC', text);
-            let pic = formatPicNames(picRaw);
-
-            let rawActions = [];
-            let lines = text.split('\n');
-            let isAction = false;
-
-            for (let l of lines) {
-                let trimmed = l.trim();
-                if (/^[\s*_-]*(Countermeasure|Action|Adjustment)[\s*_-]*[:=]?/i.test(trimmed)) {
-                    isAction = true;
-                    let afterHeader = trimmed.replace(/^[\s*_-]*(Countermeasure|Action|Adjustment)[\s*_-]*[:=]?/i, '').trim();
-                    if (afterHeader.length > 0) {
-                        let clean = afterHeader.replace(/^(\d+[.)]|[-*•])\s*/, '').replace(/[*_]/g, '').trim();
-                        if (clean) rawActions.push(clean);
-                    }
-                    continue;
-                }
-                if (isAction) {
-                   if (/^[\s*_-]*(Part Replacement|PIC|Qty Defect|Start Time|End Time|Duration|Stop Status|Status|Note|Risk Range)[\s*_-]*[:=]/i.test(trimmed)) {
-    isAction = false;
-    continue;
-}
-                    if (trimmed.length > 0) {
-                        let cleanAction = trimmed.replace(/^(\d+[.)]|[-*•])\s*/, '').replace(/[*_]/g, '').trim();
-                        if (cleanAction) rawActions.push(cleanAction);
-                    }
-                }
-            }
-
-            let formattedAdjustment = rawActions.map(act => `- ${act}`).join('\n');
-            
-            if (pic) {
-                formattedAdjustment += (formattedAdjustment ? '\n\n' : '') + `PIC : ${pic}`;
-            }
-
-            let safeAdjustment = `"${formattedAdjustment.replace(/"/g, '""')}"`;
-
-            return `="${line}"\t${rootCause}\t${safeAdjustment}`;
+            continue;
         }
+
+        if (isAction) {
+            // "Result" SUDAH DIHAPUS dari regex ini agar tindakan di bawah 'Result : still NG' tidak terputus
+            if (/^[\s*_-]*(Part Replacement|PIC|Qty Defect|Start Time|End Time|Duration|Stop Status|Status|Note|Risk Range)[\s*_-]*[:=]/i.test(trimmed)) {
+                isAction = false;
+                continue;
+            }
+
+            if (trimmed.length > 0) {
+                // Ambil bullet tindakan maupun baris subheader seperti 'Result : still NG'
+                let cleanAction = trimmed.replace(/^(\d+[.)]|[-*•])\s*/, '').replace(/[*_]/g, '').trim();
+                if (cleanAction) rawActions.push(cleanAction);
+            }
+        }
+    }
+
+    let formattedAdjustment = rawActions.map(act => `- ${act}`).join('\n');
+    
+    if (pic) {
+        formattedAdjustment += (formattedAdjustment ? '\n\n' : '') + `PIC : ${pic}`;
+    }
+
+    let safeAdjustment = `"${formattedAdjustment.replace(/"/g, '""')}"`;
+
+    return `="${line}"\t${rootCause}\t${safeAdjustment}`;
+}
 
         function showToast() {
             const toast = document.getElementById('toast');
