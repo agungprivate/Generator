@@ -400,20 +400,32 @@
         }
 
         function extractBlock(keyword, text) {
-            if (!text || !keyword) return '';
-            const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-            const regex = new RegExp('(?:^|\\n)[\\s*_\\[\\]()#–-]*' + escaped + '[\\s*_\\[\\]()#–-]*[:=–-]\\s*(.*)', 'i');
-            const match = text.match(regex);
-            if (!match) return '';
-            
-            let val = match[1] ? cleanText(match[1]) : '';
-            if (!val || /^[\s*_\\[\\]()–-]*$/.test(val)) {
-                let after = text.substring(match.index + match[0].length).trim();
-                let firstLine = after.split('\n')[0];
-                return cleanText(firstLine);
-            }
-            return cleanText(val);
+    if (!text || !keyword) return '';
+    const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp('(?:^|\\n)[\\s*_\\[\\]()#–-]*' + escaped + '[\\s*_\\[\\]()#–-]*[:=–-]\\s*(.*)', 'i');
+    const match = text.match(regex);
+    if (!match) return '';
+    
+    let rawVal = match[1] ? match[1].trim() : '';
+
+    // Jika eksplisit tanda strip '-', jangan cari ke baris bawah
+    if (/^[-–—]+$/.test(rawVal)) {
+        return '-';
+    }
+
+    let val = cleanText(rawVal);
+    if (!val) {
+        let after = text.substring(match.index + match[0].length).trim();
+        let firstLine = after.split('\n')[0].trim();
+
+        // Cegah mengambil baris bawah jika itu header lain (seperti "Action :")
+        if (/^[A-Za-z\s]+[:=–-]/i.test(firstLine)) {
+            return '-';
         }
+        return cleanText(firstLine);
+    }
+    return cleanText(val);
+}
 
         function formatPicNames(rawPic) {
             if (!rawPic) return '';
