@@ -488,10 +488,10 @@
 
         if (isAction) {
             // Berhenti jika sudah memasuki field berikutnya
-            if (/^[\s*_-]*(Result|Part Replacement|PIC|Qty Defect|Start Time|End Time|Duration|Stop Status|Status|Note|Risk Range)[\s*_-]*[:=]/i.test(trimmed)) {
-                isAction = false;
-                continue;
-            }
+            if (/^[\s*_-]*(Part Replacement|PIC|Qty Defect|Start Time|End Time|Duration|Stop Status|Status|Note|Risk Range)[\s*_-]*[:=]/i.test(trimmed)) {
+    isAction = false;
+    continue;
+}
 
             if (trimmed.length > 0) {
                 // Cek apakah baris DIAWALI bullet asli: - , * , • , atau angka seperti 1. , 1)
@@ -969,10 +969,10 @@ function formatRework(fullText) {
                     continue;
                 }
                 if (isAction) {
-                    if (/^[\s*_-]*(Result|Part Replacement|PIC|Qty Defect|Start Time|End Time|Duration|Stop Status|Status|Note|Risk Range)[\s*_-]*[:=]/i.test(trimmed)) {
-                        isAction = false;
-                        continue;
-                    }
+                   if (/^[\s*_-]*(Part Replacement|PIC|Qty Defect|Start Time|End Time|Duration|Stop Status|Status|Note|Risk Range)[\s*_-]*[:=]/i.test(trimmed)) {
+    isAction = false;
+    continue;
+}
                     if (trimmed.length > 0) {
                         let cleanAction = trimmed.replace(/^(\d+[.)]|[-*•])\s*/, '').replace(/[*_]/g, '').trim();
                         if (cleanAction) rawActions.push(cleanAction);
