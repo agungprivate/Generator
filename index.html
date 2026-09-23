@@ -432,15 +432,15 @@ function showCellWarning(invalidList) {
     clearTimeout(warningTimeout);
 
     let listHtml = invalidList
-        .slice(0, 4) // Maksimal tampilkan 4 item agar ringkas
-        .map(item => `<div>• <span class="warning-toast-badge">${item.id}</span> (${item.len} karakter)</div>`)
+        .slice(0, 4)
+        .map(item => `<div>• <span class="warning-toast-badge">${item.id}</span> (${item.len} digit)</div>`)
         .join('');
 
     if (invalidList.length > 4) {
         listHtml += `<div style="margin-top:2px; font-size:11px; color:#64748b;">+${invalidList.length - 4} ID lainnya...</div>`;
     }
 
-    msg.innerHTML = `Cell ID harus <b>10 digit</b>. Ditemukan panjang tidak sesuai:<br>${listHtml}`;
+    msg.innerHTML = `Cell ID wajib <b>10 digit</b>. Hasil <b>dikosongkan total</b> agar tidak tercopas:<br>${listHtml}`;
     toast.style.display = 'block';
 
     warningTimeout = setTimeout(() => {
@@ -943,7 +943,7 @@ function matchKlasifikasiNG(fullText, ngRaw) {
     return raw;
 }
 
-// 4. FORMAT REWORK (CELL ID BUKAN 10 KARAKTER DI-BLANK OTOMATIS)
+// 4. FORMAT REWORK (JIKA CELL ID TIDAK 10 DIGIT, SEMUA HASIL BLANK TOTAL)
 function formatRework(fullText) {
     if (!fullText) return '';
 
@@ -1046,24 +1046,35 @@ function formatRework(fullText) {
         if (cellIds.length === 0) cellIds = [''];
 
         cellIds.forEach(cellId => {
-            let validId = cellId;
-
-            // CEK STANDAR 10 DIGIT
-            if (cellId !== '') {
-                if (cellId.length !== 10) {
-                    invalidCellIds.push({ id: cellId, len: cellId.length });
-                    validId = ''; // LANGSUNG DIKOSONGKAN AGAR TIDAK TERBAWA SAAT COPY
-                }
+            // DETEKSI APAKAH CELL ID BUKAN 10 DIGIT
+            if (cellId !== '' && cellId.length !== 10) {
+                invalidCellIds.push({ id: cellId, len: cellId.length });
             }
 
-            let pkgId = (section === 'EL') ? validId : '';
-            let stkId = (section === 'TW' || section === 'CA') ? validId : '';
-            allResults.push(`${line}\t${section}\t${ngName}\t${lotId}\t${pkgId}\t${stkId}\t${status}\t${reason}\t${detailReason}\t${pic}`);
+            let pkgId = (section === 'EL') ? cellId : '';
+            let stkId = (section === 'TW' || section === 'CA') ? cellId : '';
+
+            let row = [
+                line,
+                section,
+                ngName,
+                lotId,
+                pkgId,
+                stkId,
+                status,
+                reason,
+                detailReason,
+                pic
+            ].map(col => (col || '').toString().replace(/[\r\n]+/g, ' ').trim());
+
+            allResults.push(row.join('\t'));
         });
     });
 
+    // JIKA ADA CELL ID YANG TIDAK SESUAI, KOSONGKAN HASIL TOTAL (BLANK)
     if (invalidCellIds.length > 0) {
         showCellWarning(invalidCellIds);
+        return ''; // KOTAK OUTPUT AKAN KOSONG BERSIH
     } else {
         closeWarningToast();
     }
