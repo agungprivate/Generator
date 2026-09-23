@@ -943,7 +943,7 @@ function matchKlasifikasiNG(fullText, ngRaw) {
     return raw;
 }
 
- // 4. FORMAT REWORK (DENGAN PENGAMAN CELL ID 10 KARAKTER)
+// 4. FORMAT REWORK (CELL ID BUKAN 10 KARAKTER DI-BLANK OTOMATIS)
 function formatRework(fullText) {
     if (!fullText) return '';
 
@@ -1046,18 +1046,22 @@ function formatRework(fullText) {
         if (cellIds.length === 0) cellIds = [''];
 
         cellIds.forEach(cellId => {
-            // PENGAMAN 10 KARAKTER
-            if (cellId !== '' && cellId.length !== 10) {
-                invalidCellIds.push({ id: cellId, len: cellId.length });
+            let validId = cellId;
+
+            // CEK STANDAR 10 DIGIT
+            if (cellId !== '') {
+                if (cellId.length !== 10) {
+                    invalidCellIds.push({ id: cellId, len: cellId.length });
+                    validId = ''; // LANGSUNG DIKOSONGKAN AGAR TIDAK TERBAWA SAAT COPY
+                }
             }
 
-            let pkgId = (section === 'EL') ? cellId : '';
-            let stkId = (section === 'TW' || section === 'CA') ? cellId : '';
+            let pkgId = (section === 'EL') ? validId : '';
+            let stkId = (section === 'TW' || section === 'CA') ? validId : '';
             allResults.push(`${line}\t${section}\t${ngName}\t${lotId}\t${pkgId}\t${stkId}\t${status}\t${reason}\t${detailReason}\t${pic}`);
         });
     });
 
-    // Pemicu Notifikasi jika ada yang tidak sesuai 10 karakter
     if (invalidCellIds.length > 0) {
         showCellWarning(invalidCellIds);
     } else {
