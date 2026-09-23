@@ -440,7 +440,7 @@ function showCellWarning(invalidList) {
         listHtml += `<div style="margin-top:2px; font-size:11px; color:#64748b;">+${invalidList.length - 4} ID lainnya...</div>`;
     }
 
-    msg.innerHTML = `Cell ID wajib <b>10 digit</b>. Hasil <b>dikosongkan total</b> agar tidak tercopas:<br>${listHtml}`;
+    msg.innerHTML = `Cell ID wajib <b>10 digit</b>${listHtml}`;
     toast.style.display = 'block';
 
     warningTimeout = setTimeout(() => {
