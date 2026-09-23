@@ -943,7 +943,7 @@ function matchKlasifikasiNG(fullText, ngRaw) {
     return raw;
 }
 
-// 4. FORMAT REWORK (JIKA CELL ID TIDAK 10 DIGIT, SEMUA HASIL BLANK TOTAL)
+// 4. FORMAT REWORK (MENDUKUNG MULTI-LAPORAN & CELL ID BANYAK BARIS)
 function formatRework(fullText) {
     if (!fullText) return '';
 
@@ -951,14 +951,16 @@ function formatRework(fullText) {
 
     let blocks = [];
 
-    if (/\[\d{1,2}[:.]\d{2}[^\]]*\]/i.test(fullText)) {
+    // Prioritas pemecahan blok laporan:
+    // 1. Jika ada kata kunci 'Rework DD/MM/YYYY' (baik diawali timestamp WA maupun tidak)
+    if (/Rework\s+\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}/i.test(fullText)) {
         blocks = fullText
-            .split(/(?=\[\d{1,2}[:.]\d{2}[^\]]*\])/i)
+            .split(/(?=(?:^|\n)\s*(?:\[\d{1,2}[:.]\d{2}[^\]]*\][^\n]*\s*)?Rework\s+\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4})/i)
             .map(b => b.trim())
             .filter(b => b.length > 0);
-    } else if (/(?:^|\n)\s*Rework\s+\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}/i.test(fullText)) {
+    } else if (/\[\d{1,2}[:.]\d{2}[^\]]*\]/i.test(fullText)) {
         blocks = fullText
-            .split(/(?=(?:^|\n)\s*Rework\s+\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4})/i)
+            .split(/(?=\[\d{1,2}[:.]\d{2}[^\]]*\])/i)
             .map(b => b.trim())
             .filter(b => b.length > 0);
     } else if (/\[(?:Rework\vert{}Problem Report)\]/i.test(fullText)) {
@@ -1003,10 +1005,23 @@ function formatRework(fullText) {
             section = 'TW';
         }
 
-        let cellIdRaw = extractBlock('Cell ID', text) || extractBlock('CellID', text) || extractBlock('Cell', text);
-        if (!cellIdRaw) {
-            let matchCell = text.match(/(?:Cell\s*ID|CellID)\s*[:=–-]?\s*([A-Za-z0-9_,\s-]+)/i);
-            if (matchCell) cellIdRaw = cleanText(matchCell[1]);
+        // EKSTRAKSI CELL ID LENGKAP (MENDUKUNG MULTILINE / BULLET LIST KE BAWAH)
+        let cellIds = [];
+        let matchCellBlock = text.match(/(?:^|\n)[\s*•_–.-]*(?:Cell\s*ID|CellID|Cell)\s*[:=–-]?\s*([\s\S]*?)(?=\s*(?:\n[\s*•_–.-]*(?:Total|Status|PIC|Cc|Note|Shift|NG|Section)\b|$))/i);
+
+        if (matchCellBlock && matchCellBlock[1].trim()) {
+            let rawCellText = matchCellBlock[1].trim();
+            let rawLines = rawCellText.split('\n');
+            rawLines.forEach(l => {
+                let cleaned = l.replace(/^[•\s*_\-–]+/, '').trim();
+                if (cleaned) {
+                    let parts = cleaned.split(/[,;\s/&]+|\b(?:dan|and)\b/i);
+                    parts.forEach(p => {
+                        let id = p.trim();
+                        if (id) cellIds.push(id);
+                    });
+                }
+            });
         }
 
         let statusRaw = extractBlock('Status', text);
@@ -1039,14 +1054,10 @@ function formatRework(fullText) {
 
         let lotId = extractBlock('Lot ID', text) || extractBlock('LotID', text) || '';
 
-        let cellIds = cellIdRaw
-            ? cellIdRaw.split(/[,;\n&]+|\b(?:dan|and)\b/i).map(id => id.trim()).filter(id => id.length > 0)
-            : [];
-        
         if (cellIds.length === 0) cellIds = [''];
 
         cellIds.forEach(cellId => {
-            // DETEKSI APAKAH CELL ID BUKAN 10 DIGIT
+            // Validasi standar 10 karakter
             if (cellId !== '' && cellId.length !== 10) {
                 invalidCellIds.push({ id: cellId, len: cellId.length });
             }
@@ -1071,10 +1082,10 @@ function formatRework(fullText) {
         });
     });
 
-    // JIKA ADA CELL ID YANG TIDAK SESUAI, KOSONGKAN HASIL TOTAL (BLANK)
+    // Jika ada Cell ID yang tidak 10 digit, kosongkan output total
     if (invalidCellIds.length > 0) {
         showCellWarning(invalidCellIds);
-        return ''; // KOTAK OUTPUT AKAN KOSONG BERSIH
+        return '';
     } else {
         closeWarningToast();
     }
