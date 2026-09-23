@@ -623,39 +623,42 @@ function formatExcel(fullText) {
     return allRows.join('\n').trim();
 }
 
-        // 3.A FORMAT CRACK - IMAGE (NAMING) - SUPPORT MULTIPLE DATA
-        function formatVisionNaming(text) {
-            let lineMatch = text.match(/(?:Line|PKG)\s*[:=]?\s*([0-9]+-[0-9]+)/i);
-            let line = lineMatch ? lineMatch[1] : '';
+       // 3.A FORMAT CRACK - IMAGE (NAMING)
+function formatVisionNaming(text) {
+    let lineMatch = text.match(/(?:Line|PKG)\s*[:=]?\s*([0-9]+-[0-9]+)/i);
+    let line = lineMatch ? lineMatch[1] : '';
 
-            let jamRaw = extractBlock('Jam', text) || extractBlock('Time', text);
-            let lotId = extractBlock('Lot ID', text) || extractBlock('LotID', text);
-            let pouchLot = extractBlock('Pouch Lot', text) || extractBlock('Pouch ID', text);
+    let jamRaw = extractBlock('Jam', text) || extractBlock('Time', text);
+    let lotId = extractBlock('Lot ID', text) || extractBlock('LotID', text);
+    let pouchLot = extractBlock('Pouch Lot', text) || extractBlock('Pouch ID', text);
 
-            let status = 'OVERKILL';
-            let lowerText = text.toLowerCase();
-            
-            if (lowerText.includes('pinhole') || lowerText.includes('pin hole')) {
-                status = 'PINHOLE';
-            } else if (lowerText.includes('crack')) {
-                status = 'CRACK';
-            } else if (lowerText.includes('overkill')) {
-                status = 'OVERKILL';
-            } else if (lowerText.includes('ng')) {
-                status = 'NG';
-            }
+    let status = 'OVERKILL';
+    let lowerText = text.toLowerCase();
+    
+    // Prioritaskan REAL jika terdeteksi 'real' atau 'real ng'
+    if (lowerText.includes('real ng') || lowerText.includes('real')) {
+        status = 'REAL';
+    } else if (lowerText.includes('pinhole') || lowerText.includes('pin hole')) {
+        status = 'PINHOLE';
+    } else if (lowerText.includes('crack')) {
+        status = 'CRACK';
+    } else if (lowerText.includes('overkill')) {
+        status = 'OVERKILL';
+    } else if (lowerText.includes('ng')) {
+        status = 'NG';
+    }
 
-            let splitRegex = /[,\/;&]+|\b(?:dan|and)\b/i;
-            let jams = jamRaw
-                ? jamRaw.split(splitRegex).map(j => j.replace(/[^0-9]/g, '')).filter(j => j.length > 0)
-                : [];
+    let splitRegex = /[,\/;&]+|\b(?:dan|and)\b/i;
+    let jams = jamRaw
+        ? jamRaw.split(splitRegex).map(j => j.replace(/[^0-9]/g, '')).filter(j => j.length > 0)
+        : [];
 
-            if (jams.length === 0) {
-                return `${line}__${lotId}_${pouchLot}_${status}`;
-            }
+    if (jams.length === 0) {
+        return `${line}__${lotId}_${pouchLot}_${status}`;
+    }
 
-            return jams.map(j => `${line}_${j}_${lotId}_${pouchLot}_${status}`).join('\n');
-        }
+    return jams.map(j => `${line}_${j}_${lotId}_${pouchLot}_${status}`).join('\n');
+}
 
         // 3.B FORMAT CRACK - EXCEL - SUPPORT MULTIPLE DATA & PREVENT DATE FORMAT
         function formatCrackExcel(text) {
