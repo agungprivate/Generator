@@ -440,7 +440,7 @@ function showCellWarning(invalidList) {
         listHtml += `<div style="margin-top:2px; font-size:11px; color:#64748b;">+${invalidList.length - 4} ID lainnya...</div>`;
     }
 
-    msg.innerHTML = `Standar Cell ID harus <b>10 digit</b>. Ditemukan panjang tidak sesuai:<br>${listHtml}`;
+    msg.innerHTML = `Cell ID harus <b>10 digit</b>. Ditemukan panjang tidak sesuai:<br>${listHtml}`;
     toast.style.display = 'block';
 
     warningTimeout = setTimeout(() => {
