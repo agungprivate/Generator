@@ -15,6 +15,72 @@
 
     <!-- MODERN CLEAN STYLING -->
     <style>
+/* FLOATING MODERN WARNING NOTIF */
+        
+.warning-toast {
+    position: fixed;
+    top: 24px;
+    right: 24px;
+    background: #fff;
+    border: 1px solid #fed7aa;
+    border-left: 5px solid #f97316;
+    border-radius: 12px;
+    padding: 14px 18px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+    display: none;
+    z-index: 99999;
+    max-width: 380px;
+    animation: slideInDown 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.warning-toast-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    font-weight: 700;
+    color: #c2410c;
+    font-size: 13px;
+    margin-bottom: 4px;
+}
+
+.warning-toast-body {
+    font-size: 12px;
+    color: #475569;
+    line-height: 1.4;
+}
+
+.warning-toast-badge {
+    display: inline-block;
+    background: #ffedd5;
+    color: #9a3412;
+    padding: 2px 6px;
+    border-radius: 6px;
+    font-family: monospace;
+    font-size: 11px;
+    margin-top: 4px;
+}
+
+.warning-toast-close {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #94a3b8;
+    font-size: 16px;
+    font-weight: bold;
+    padding: 0 4px;
+    line-height: 1;
+}
+
+.warning-toast-close:hover {
+    color: #0f172a;
+}
+
+@keyframes slideInDown {
+    from { opacity: 0; transform: translateY(-16px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+        
         :root {
             --bg-body: #f8fafc;
             --card-bg: #ffffff;
@@ -276,6 +342,14 @@
 </head>
 <body>
 
+<div class="warning-toast" id="warningToast">
+    <div class="warning-toast-header">
+        <span>⚠️ Validasi Cell ID</span>
+        <button class="warning-toast-close" onclick="closeWarningToast()">×</button>
+    </div>
+    <div class="warning-toast-body" id="warningToastMsg"></div>
+</div>
+    
     <div class="container">
         <h1 class="header-title">Report Generator</h1>
         
@@ -317,6 +391,7 @@
     <script>
         let currentMode = 'downtime';
         let crackSubMode = 'image';
+        let warningTimeout = null;
 
         function setCrackSubMode(subMode) {
             crackSubMode = subMode;
@@ -347,6 +422,37 @@
             }
         }
 
+
+
+function showCellWarning(invalidList) {
+    const toast = document.getElementById('warningToast');
+    const msg = document.getElementById('warningToastMsg');
+    if (!toast || !msg) return;
+
+    clearTimeout(warningTimeout);
+
+    let listHtml = invalidList
+        .slice(0, 4) // Maksimal tampilkan 4 item agar ringkas
+        .map(item => `<div>• <span class="warning-toast-badge">${item.id}</span> (${item.len} karakter)</div>`)
+        .join('');
+
+    if (invalidList.length > 4) {
+        listHtml += `<div style="margin-top:2px; font-size:11px; color:#64748b;">+${invalidList.length - 4} ID lainnya...</div>`;
+    }
+
+    msg.innerHTML = `Standar Cell ID harus <b>10 digit</b>. Ditemukan panjang tidak sesuai:<br>${listHtml}`;
+    toast.style.display = 'block';
+
+    warningTimeout = setTimeout(() => {
+        closeWarningToast();
+    }, 6000);
+}
+
+function closeWarningToast() {
+    const toast = document.getElementById('warningToast');
+    if (toast) toast.style.display = 'none';
+}
+        
         function setMode(mode, keepInput = false) {
             const prevMode = currentMode;
             currentMode = mode;
@@ -837,7 +943,7 @@ function matchKlasifikasiNG(fullText, ngRaw) {
     return raw;
 }
 
-   // 4. FORMAT REWORK (FIX BATCH & HEADER/KONTAK WHATSAPP)
+ // 4. FORMAT REWORK (DENGAN PENGAMAN CELL ID 10 KARAKTER)
 function formatRework(fullText) {
     if (!fullText) return '';
 
@@ -845,11 +951,6 @@ function formatRework(fullText) {
 
     let blocks = [];
 
-    // Prioritas pemecah laporan batch:
-    // 1. Timestamp WA [20:26, ...]
-    // 2. Baris Rework tanggal: Rework 16/09/2026
-    // 3. Header kurung siku: [Rework] atau [Problem Report]
-    // 4. Nomor line bertanda pagar di baris baru: #2-1 atau #PKG
     if (/\[\d{1,2}[:.]\d{2}[^\]]*\]/i.test(fullText)) {
         blocks = fullText
             .split(/(?=\[\d{1,2}[:.]\d{2}[^\]]*\])/i)
@@ -860,9 +961,9 @@ function formatRework(fullText) {
             .split(/(?=(?:^|\n)\s*Rework\s+\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4})/i)
             .map(b => b.trim())
             .filter(b => b.length > 0);
-    } else if (/\[(?:Rework|Problem Report)\]/i.test(fullText)) {
+    } else if (/\[(?:Rework\vert{}Problem Report)\]/i.test(fullText)) {
         blocks = fullText
-            .split(/(?=\[(?:Rework|Problem Report)\])/i)
+            .split(/(?=\[(?:Rework\vert{}Problem Report)\])/i)
             .map(b => b.trim())
             .filter(b => b.length > 0);
     } else {
@@ -875,13 +976,12 @@ function formatRework(fullText) {
     if (blocks.length === 0) blocks = [fullText];
 
     let allResults = [];
+    let invalidCellIds = [];
 
     blocks.forEach(text => {
-        // Ambil baris line
         let lineMatch = text.match(/(?:^|\n)\s*(?:#|Line\s*[:=–-]|PKG)?\s*([0-9]+-[0-9]+)/i);
         let line = lineMatch ? `PKG ${lineMatch[1]}` : '';
 
-        // Abaikan blok jika tidak ada baris line yang valid
         if (!line) return;
 
         let ngRaw = extractBlock('NG', text);
@@ -946,14 +1046,27 @@ function formatRework(fullText) {
         if (cellIds.length === 0) cellIds = [''];
 
         cellIds.forEach(cellId => {
+            // PENGAMAN 10 KARAKTER
+            if (cellId !== '' && cellId.length !== 10) {
+                invalidCellIds.push({ id: cellId, len: cellId.length });
+            }
+
             let pkgId = (section === 'EL') ? cellId : '';
             let stkId = (section === 'TW' || section === 'CA') ? cellId : '';
             allResults.push(`${line}\t${section}\t${ngName}\t${lotId}\t${pkgId}\t${stkId}\t${status}\t${reason}\t${detailReason}\t${pic}`);
         });
     });
 
+    // Pemicu Notifikasi jika ada yang tidak sesuai 10 karakter
+    if (invalidCellIds.length > 0) {
+        showCellWarning(invalidCellIds);
+    } else {
+        closeWarningToast();
+    }
+
     return allResults.join('\n');
 }
+        
         // FORMAT TOP 5
 function formatTop5(text) {
     let lineMatch = text.match(/(?:Line\s*ID|Line|PKG)\s*[:=–-]?\s*([0-9]+-[0-9]+)/i);
