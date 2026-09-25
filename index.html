@@ -849,12 +849,9 @@ function matchKlasifikasiNG(fullText, ngRaw) {
     let cleanFull = (fullText || '').replace(/\u00A0/g, ' ');
     let raw = (ngRaw || '').replace(/\u00A0/g, ' ');
 
-    // 1. Bersihkan isi kurung dari teks NG agar hanya tersisa nama NG intinya
     let cleanedNg = raw.replace(/\(.*?\)/gi, '').trim();
-    // Ubah underscore (_) atau strip (-) jadi spasi (contoh: Lead_R -> Lead R)
     let ng_lower = cleanedNg.replace(/[_-]/g, ' ').toLowerCase();
 
-    // 2. Deteksi polaritas (+) / [+] atau (-) / [-]
     let sign = '-';
     if (/[\(\[]\s*\+\s*[\)\]]|\bplus\b/i.test(cleanFull)) {
         sign = '+';
@@ -862,26 +859,26 @@ function matchKlasifikasiNG(fullText, ngRaw) {
         sign = '-';
     }
 
-    // --- PROSES KLASIFIKASI PRIORITAS TINGGI ---
+    // --- KLASIFIKASI PRIORITAS TINGGI ---
     if (ng_lower.includes('weight before') || ng_lower.includes('before weight') || ng_lower.includes('before e/f') || ng_lower.includes('before ef')) {
-    return 'Weight Before E/F';
-}
+        return 'Weight Before E/F';
+    }
     if (ng_lower === 'aw' || /\baw\b/i.test(ng_lower) || ng_lower.includes('weight after') || ng_lower.includes('after weight') || ng_lower.includes('after e/f') || ng_lower.includes('after ef')) {
-    return 'Weight After E/F';
-}
-    if (ng_lower.includes('ir bcr') || ng_lower.includes('barcode read') || ng_lower.includes('read ng') || ng_lower.includes('bcr ng')) {
-    return 'Barcode Read NG';
-}
+        return 'Weight After E/F';
+    }
+    
+    // MENAMPILKAN: IR Barcode Verify NG
+    if (ng_lower.includes('bcr ng') || ng_lower.includes('barcode read') || ng_lower.includes('read ng') || ng_lower.includes('bcr') || ng_lower.includes('barcode verify') || ng_lower.includes('verify ng')) {
+        return 'IR Barcode Verify NG';
+    }
     if (ng_lower.includes('it validation') || ng_lower.includes('barcode it')) {
         return 'Barcode IT Validation';
     }
-    if (ng_lower.includes('verify ng') || ng_lower.includes('barcode verify')) {
-        return 'Barcode Verify NG';
-    }
+    
     if (ng_lower.includes('ir contact')) {
         return 'IR Contact';
     }
-    if (/ (ir\s*lc|lc) /i.test(ng_lower) || ng_lower.includes('lead contact')) {
+    if (/(ir\s*lc|lc)/i.test(ng_lower) || ng_lower.includes('lead contact') || ng_lower.includes('lead contect')) {
         return 'Lead Contact';
     }
     if (ng_lower.includes('v sealing') || ng_lower.includes('v-sealing') || ng_lower.includes('vsealing')) {
@@ -905,12 +902,10 @@ function matchKlasifikasiNG(fullText, ngRaw) {
         return 'Short Contact';
     }
 
-    // Lead Film
     if (/lead\s*fi?lm\d*/i.test(ng_lower) || (ng_lower.includes('lead') && ng_lower.includes('film'))) {
         return `Lead Film (${sign})`;
     }
 
-    // Lead R & Lead L (Wajib dicek SEBELUM aturan overkill)
     if (/lead\s*r(?![a-z])/i.test(ng_lower)) {
         return `Lead R (${sign})`;
     }
@@ -937,7 +932,6 @@ function matchKlasifikasiNG(fullText, ngRaw) {
         return `GAP (${sign})`;
     }
 
-    // Hanya ubah ke Dimension Overkill jika nama NG intinya benar-benar 'dimension' atau diawali 'overkill'
     if (ng_lower.includes('dimension') || ng_lower.startsWith('overkill') || ng_lower === 'overkill') {
         return `Dimension Overkill (${sign})`;
     }
