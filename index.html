@@ -932,7 +932,14 @@ function matchKlasifikasiNG(fullText, ngRaw) {
         return `GAP (${sign})`;
     }
 
-    if (ng_lower.includes('dimension') || ng_lower.startsWith('overkill') || ng_lower === 'overkill') {
+  // DIMENSION OVERKILL (TERMASUK B-DIM & H-DIM)
+    if (
+        ng_lower.includes('dimension') || 
+        ng_lower.includes('b dim') || 
+        ng_lower.includes('h dim') || 
+        ng_lower.startsWith('overkill') || 
+        ng_lower === 'overkill'
+    ) {
         return `Dimension Overkill (${sign})`;
     }
 
