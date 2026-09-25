@@ -731,8 +731,9 @@ function formatExcel(fullText) {
 
        // 3.A FORMAT CRACK - IMAGE (NAMING)
 function formatVisionNaming(text) {
-    let lineMatch = text.match(/(?:Line|PKG)\s*[:=]?\s*([0-9]+-[0-9]+)/i);
-    let line = lineMatch ? lineMatch[1] : '';
+  // Mengizinkan tanda titik (.) atau strip (-) dan otomatis diubah menjadi format standard (-)
+    let lineMatch = text.match(/(?:Line|PKG)\s*[:=–-]?\s*([0-9]+[\.\-_][0-9]+)/i);
+    let line = lineMatch ? lineMatch[1].replace(/[\._]/g, '-') : '';
 
     let jamRaw = extractBlock('Jam', text) || extractBlock('Time', text);
     let lotId = extractBlock('Lot ID', text) || extractBlock('LotID', text);
@@ -768,8 +769,9 @@ function formatVisionNaming(text) {
 
         // 3.B FORMAT CRACK - EXCEL - SUPPORT MULTIPLE DATA & PREVENT DATE FORMAT
         function formatCrackExcel(text) {
-            let lineMatch = text.match(/(?:Line|PKG)\s*[:=–-]?\s*([0-9]+-[0-9]+)/i);
-            let line = lineMatch ? lineMatch[1] : extractBlock('Line', text);
+            // Mengizinkan tanda titik (.) atau strip (-) dan otomatis diubah menjadi format standard (-)
+let lineMatch = text.match(/(?:Line|PKG)\s*[:=–-]?\s*([0-9]+[\.\-_][0-9]+)/i);
+let line = lineMatch ? lineMatch[1].replace(/[\._]/g, '-') : extractBlock('Line', text).replace(/[\._]/g, '-');
 
             let rawDate = extractBlock('Date', text) || extractBlock('Tanggal', text);
             if (!rawDate) {
