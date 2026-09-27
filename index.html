@@ -844,16 +844,21 @@ let line = lineMatch ? lineMatch[1].replace(/[\._]/g, '-') : extractBlock('Line'
             return rows.join('\n');
         }
 
-      // FUNGSI KLASIFIKASI NG NAME (REWORK) - PERBAIKAN PRIORITAS & OVERKILL
+   // FUNGSI KLASIFIKASI NG NAME (REWORK)
 function matchKlasifikasiNG(fullText, ngRaw) {
     let cleanFull = (fullText || '').replace(/\u00A0/g, ' ');
     let raw = (ngRaw || '').replace(/\u00A0/g, ' ');
 
+    // 1. Bersihkan isi kurung dari teks NG agar hanya tersisa nama NG intinya
     let cleanedNg = raw.replace(/\(.*?\)/gi, '').trim();
     let ng_lower = cleanedNg.replace(/[_-]/g, ' ').toLowerCase();
 
+    // 2. Deteksi polaritas (+) / [+] atau (-) / [-] (Prioritaskan tanda di baris Tape Vision / NG)
     let sign = '-';
-    if (/[\(\[]\s*\+\s*[\)\]]|\bplus\b/i.test(cleanFull)) {
+    let visionMatch = cleanFull.match(/(?:Tape\s*Vision|Vision|NG)[^\n]*?[\(\[]\s*([+-])\s*[\)\]]/i);
+    if (visionMatch) {
+        sign = visionMatch[1];
+    } else if (/[\(\[]\s*\+\s*[\)\]]|\bplus\b/i.test(cleanFull)) {
         sign = '+';
     } else if (/[\(\[]\s*-\s*[\)\]]|\bminus\b/i.test(cleanFull)) {
         sign = '-';
@@ -867,7 +872,7 @@ function matchKlasifikasiNG(fullText, ngRaw) {
         return 'Weight After E/F';
     }
     
-    // MENAMPILKAN: IR Barcode Verify NG
+    // Barcode / BCR
     if (ng_lower.includes('bcr ng') || ng_lower.includes('barcode read') || ng_lower.includes('read ng') || ng_lower.includes('bcr') || ng_lower.includes('barcode verify') || ng_lower.includes('verify ng')) {
         return 'IR Barcode Verify NG';
     }
@@ -902,10 +907,12 @@ function matchKlasifikasiNG(fullText, ngRaw) {
         return 'Short Contact';
     }
 
+    // Lead Film
     if (/lead\s*fi?lm\d*/i.test(ng_lower) || (ng_lower.includes('lead') && ng_lower.includes('film'))) {
         return `Lead Film (${sign})`;
     }
 
+    // Lead R & Lead L
     if (/lead\s*r(?![a-z])/i.test(ng_lower)) {
         return `Lead R (${sign})`;
     }
@@ -932,13 +939,15 @@ function matchKlasifikasiNG(fullText, ngRaw) {
         return `GAP (${sign})`;
     }
 
-  // DIMENSION OVERKILL (TERMASUK B-DIM & H-DIM)
+    // DIMENSION OVERKILL (MENDUKUNG: BDIM, B-DIM, B DIM, HDIM, H-DIM, H DIM, OVERKILL)
     if (
-        ng_lower.includes('dimension') || 
-        ng_lower.includes('b dim') || 
-        ng_lower.includes('h dim') || 
-        ng_lower.startsWith('overkill') || 
-        ng_lower === 'overkill'
+        /\b[bh]\s*dim\b/i.test(ng_lower) ||
+        ng_lower.includes('bdim') ||
+        ng_lower.includes('hdim') ||
+        ng_lower.includes('dimension') ||
+        ng_lower.startsWith('overkill') ||
+        ng_lower === 'overkill' ||
+        raw.toLowerCase().includes('overkill')
     ) {
         return `Dimension Overkill (${sign})`;
     }
