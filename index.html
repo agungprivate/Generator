@@ -1033,16 +1033,17 @@ function formatRework(fullText) {
             section = 'TW';
         }
 
-        // EKSTRAKSI CELL ID LENGKAP (MENDUKUNG MULTILINE / BULLET LIST KE BAWAH)
+     // EKSTRAKSI CELL ID (MENDUKUNG HURUF BESAR/KECIL: Total/total, Status/status, dll)
         let cellIds = [];
-        let matchCellBlock = text.match(/(?:^|\n)[\s*•_–.-]*(?:Cell\s*ID|CellID|Cell)\s*[:=–-]?\s*([\s\S]*?)(?=\s*(?:\n[\s*•_–.-]*(?:Total|Status|PIC|Cc|Note|Shift|NG|Section)\b|$))/i);
+        let matchCellBlock = text.match(/(?:^|\n)[\s*•_–.-]*(?:Cell\s*ID|CellID|Cell)\s*[:=–-]?\s*([\s\S]*?)(?=\s*(?:\n[\s*•_–.-]*(?:total|status|pic|cc|note|shift|ng|section)\b|$))/i);
 
         if (matchCellBlock && matchCellBlock[1].trim()) {
             let rawCellText = matchCellBlock[1].trim();
             let rawLines = rawCellText.split('\n');
             rawLines.forEach(l => {
                 let cleaned = l.replace(/^[•\s*_\-–]+/, '').trim();
-                if (cleaned) {
+                // Abaikan jika baris tersebut memuat kata kunci seperti total, status, dll
+                if (cleaned && !/^(?:total|status|pic|cc|note|shift|ng|section)\b/i.test(cleaned)) {
                     let parts = cleaned.split(/[,;\s/&]+|\b(?:dan|and)\b/i);
                     parts.forEach(p => {
                         let id = p.trim();
