@@ -1005,14 +1005,30 @@ function formatRework(fullText) {
         }
         let ngName = matchKlasifikasiNG(text, ngRaw);
 
-        let section = 'TW';
+       let section = 'TW';
         let lowerText = text.toLowerCase();
         let lowerNg = (ngName || '').toLowerCase();
 
-        if (lowerText.includes('cell assy') || lowerText.includes('ca') || lowerNg.includes('sealing vision') || lowerNg.includes('lead vision')) {
-            section = 'CA';
-        } else if (/\bEL\b|Filling/i.test(text) || lowerNg.includes('weight') || lowerNg.includes('barcode') || lowerNg.includes('ir contact') || lowerNg.includes('lead contact') || lowerNg.includes('v sealing')) {
+        if (
+            lowerText.includes('el filling') ||
+            lowerText.includes('filling') ||
+            /\bel\b/i.test(lowerText) ||
+            lowerText.includes('e/f') ||
+            lowerNg.includes('barcode') ||
+            lowerNg.includes('bcr') ||
+            lowerNg.includes('weight') ||
+            lowerNg.includes('ir contact') ||
+            lowerNg.includes('lead contact') ||
+            lowerNg.includes('v sealing')
+        ) {
             section = 'EL';
+        } else if (
+            lowerText.includes('cell assy') || 
+            lowerText.includes('ca') || 
+            lowerNg.includes('sealing vision') || 
+            lowerNg.includes('lead vision')
+        ) {
+            section = 'CA';
         } else {
             section = 'TW';
         }
