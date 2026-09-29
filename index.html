@@ -1033,9 +1033,11 @@ function formatRework(fullText) {
             section = 'TW';
         }
 
-     // EKSTRAKSI CELL ID LENGKAP & AMAN DARI TOTAL / STATUS
+  // EKSTRAKSI CELL ID (HANYA MENCOCOKKAN 'CELL ID', BUKAN 'CELL ASSY')
         let cellIds = [];
-        let matchCellBlock = text.match(/(?:^|\n)[\s*•_–.-]*(?:Cell\s*ID|CellID|Cell)\s*[:=–-]?\s*([\s\S]*?)(?=\s*(?:\n[\s*•_–.-]*(?:total|status|pic|cc|note|shift|ng|section)\b|$))/i);
+        
+        // Kunci regex: wajib ada kata 'ID' setelah Cell (Cell ID / CellID / Cell_ID)
+        let matchCellBlock = text.match(/(?:^|\n)[\s*•_–.-]*Cell\s*[-_]?\s*ID\s*[:=–-]?\s*([\s\S]*?)(?=\s*(?:\n[\s*•_–.-]*(?:total|status|pic|cc|note|shift|ng|section)\b|$))/i);
 
         if (matchCellBlock && matchCellBlock[1].trim()) {
             let rawCellText = matchCellBlock[1].trim();
@@ -1044,14 +1046,14 @@ function formatRework(fullText) {
             rawLines.forEach(l => {
                 let cleaned = l.replace(/^[•\s*_\-–]+/, '').trim();
                 
-                // Lewati jika baris ini berisi kata kunci total, status, dll
+                // Abaikan jika baris berisi kata kunci total, status, pic, dll
                 if (cleaned && !/^(?:total|status|pic|cc|note|shift|ng|section)\b/i.test(cleaned)) {
-                    // Pisahkan berdasarkan koma, titik koma, spasi, garis miring, atau kata sambung
+                    // Pecah jika ada koma, titik koma, spasi, atau kata sambung
                     let parts = cleaned.split(/[,;\s/&]+|\b(?:dan|and)\b/i);
                     parts.forEach(p => {
                         let id = p.trim();
-                        // Hanya ambil jika bukan kata satuan (seperti ea, pcs) dan bukan kosong
-                        if (id && !/^(?:ea|pcs|pc|total)$/i.test(id)) {
+                        // Hanya ambil jika bukan kata satuan dan bukan kata keterangan
+                        if (id && !/^(?:ea|pcs|pc|total|ok|ng)$/i.test(id)) {
                             cellIds.push(id);
                         }
                     });
