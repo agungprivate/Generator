@@ -1033,21 +1033,27 @@ function formatRework(fullText) {
             section = 'TW';
         }
 
-     // EKSTRAKSI CELL ID (MENDUKUNG HURUF BESAR/KECIL: Total/total, Status/status, dll)
+     // EKSTRAKSI CELL ID LENGKAP & AMAN DARI TOTAL / STATUS
         let cellIds = [];
         let matchCellBlock = text.match(/(?:^|\n)[\s*•_–.-]*(?:Cell\s*ID|CellID|Cell)\s*[:=–-]?\s*([\s\S]*?)(?=\s*(?:\n[\s*•_–.-]*(?:total|status|pic|cc|note|shift|ng|section)\b|$))/i);
 
         if (matchCellBlock && matchCellBlock[1].trim()) {
             let rawCellText = matchCellBlock[1].trim();
             let rawLines = rawCellText.split('\n');
+            
             rawLines.forEach(l => {
                 let cleaned = l.replace(/^[•\s*_\-–]+/, '').trim();
-                // Abaikan jika baris tersebut memuat kata kunci seperti total, status, dll
+                
+                // Lewati jika baris ini berisi kata kunci total, status, dll
                 if (cleaned && !/^(?:total|status|pic|cc|note|shift|ng|section)\b/i.test(cleaned)) {
+                    // Pisahkan berdasarkan koma, titik koma, spasi, garis miring, atau kata sambung
                     let parts = cleaned.split(/[,;\s/&]+|\b(?:dan|and)\b/i);
                     parts.forEach(p => {
                         let id = p.trim();
-                        if (id) cellIds.push(id);
+                        // Hanya ambil jika bukan kata satuan (seperti ea, pcs) dan bukan kosong
+                        if (id && !/^(?:ea|pcs|pc|total)$/i.test(id)) {
+                            cellIds.push(id);
+                        }
                     });
                 }
             });
