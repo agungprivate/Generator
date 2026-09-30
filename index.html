@@ -890,7 +890,14 @@ function matchKlasifikasiNG(fullText, ngRaw) {
         return 'V Sealing';
     }
 
-    if (ng_lower.includes('lead pos') || ng_lower.includes('leadpos') || ng_lower.includes('lead position') || ng_lower.includes('lead vision') || ng_lower.includes('vision lead')) {
+   if (
+        ng_lower.includes('lead sealing') ||
+        ng_lower.includes('lead pos') || 
+        ng_lower.includes('leadpos') || 
+        ng_lower.includes('lead position') || 
+        ng_lower.includes('lead vision') || 
+        ng_lower.includes('vision lead')
+    ) {
         return 'Lead Vision';
     }
     if (ng_lower.includes('sealing vision') || ng_lower.includes('sealing ng') || ng_lower.includes('sealing')) {
