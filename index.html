@@ -500,6 +500,13 @@ function closeWarningToast() {
             }
         }
 
+// Mengubah huruf pertama teks menjadi kapital
+function capitalizeFirst(text) {
+    if (!text) return '';
+    let trimmed = text.trim();
+    return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+}
+        
         function cleanText(str) {
             if (!str) return '';
             return str.replace(/^[\s:*–=-]+|[\s:*–=-]+$/g, '').trim();
@@ -1141,6 +1148,7 @@ function formatRework(fullText) {
 function formatTop5(text) {
     let lineMatch = text.match(/(?:Line\s*ID|Line|PKG)\s*[:=–-]?\s*([0-9]+-[0-9]+)/i);
     let line = lineMatch ? lineMatch[1] : '';
+    let adjustment = capitalizeFirst(rawAdjustment);
 
     let rootCause = extractBlock('Cause', text) || extractBlock('Root Cause', text);
     
