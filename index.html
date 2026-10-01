@@ -1047,27 +1047,32 @@ function formatRework(fullText) {
             section = 'TW';
         }
 
-  // EKSTRAKSI CELL ID (HANYA MENCOCOKKAN 'CELL ID', BUKAN 'CELL ASSY')
+  // EKSTRAKSI CELL ID (MEMBERSIHKAN PENOMORAN 1., 2., DLL SERTA SPASI GAIB)
         let cellIds = [];
-        
-        // Kunci regex: wajib ada kata 'ID' setelah Cell (Cell ID / CellID / Cell_ID)
-        let matchCellBlock = text.match(/(?:^|\n)[\s*•_–.-]*Cell\s*[-_]?\s*ID\s*[:=–-]?\s*([\s\S]*?)(?=\s*(?:\n[\s*•_–.-]*(?:total|status|pic|cc|note|shift|ng|section)\b|$))/i);
+        let matchCellBlock = text.match(/(?:^|\n)[\s*•_–.-]*Cell\s*[-_]?\s*ID\s*[:=–-]?\s*([\s\S]*?)(?=\s*(?:\n[\s*•_–.-]*(?:total|status|pic|cc|note|shift|ng|section|reason)\b|$))/i);
 
         if (matchCellBlock && matchCellBlock[1].trim()) {
-            let rawCellText = matchCellBlock[1].trim();
+            // Bersihkan zero-width space dan non-breaking space
+            let rawCellText = matchCellBlock[1].replace(/[\u200B-\u200D\uFEFF]/g, '').replace(/\u00A0/g, ' ').trim();
             let rawLines = rawCellText.split('\n');
-            
+
             rawLines.forEach(l => {
-                let cleaned = l.replace(/^[•\s*_\-–]+/, '').trim();
-                
-                // Abaikan jika baris berisi kata kunci total, status, pic, dll
-                if (cleaned && !/^(?:total|status|pic|cc|note|shift|ng|section)\b/i.test(cleaned)) {
-                    // Pecah jika ada koma, titik koma, spasi, atau kata sambung
+                // 1. Bersihkan bullet dan nomor urut di awal baris (misal: "1.", "1)", "•")
+                let cleaned = l.replace(/^[•\s*_\-–]+/, '')
+                               .replace(/^\d+[\.\)]\s*/, '')
+                               .trim();
+
+                // 2. Lewati jika baris memuat label keterangan lain
+                if (cleaned && !/^(?:total|status|pic|cc|note|shift|ng|section|reason)\b/i.test(cleaned)) {
+                    // Pecah berdasarkan koma, spasi, atau pemisah lain
                     let parts = cleaned.split(/[,;\s/&]+|\b(?:dan|and)\b/i);
                     parts.forEach(p => {
                         let id = p.trim();
-                        // Hanya ambil jika bukan kata satuan dan bukan kata keterangan
-                        if (id && !/^(?:ea|pcs|pc|total|ok|ng)$/i.test(id)) {
+                        // Buang sisa tanda titik/simbol di ujung ID jika ada
+                        id = id.replace(/^[^\w]+|[^\w]+$/g, '');
+                        
+                        // Abaikan jika hanya berupa angka nomor urut murni atau kata keterangan
+                        if (id && !/^\d+$/.test(id) && !/^(?:ea|pcs|pc|total|ok|ng)$/i.test(id)) {
                             cellIds.push(id);
                         }
                     });
