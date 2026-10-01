@@ -16,7 +16,6 @@
     <!-- MODERN CLEAN STYLING -->
     <style>
 /* FLOATING MODERN WARNING NOTIF */
-        
 .warning-toast {
     position: fixed;
     top: 24px;
@@ -422,36 +421,34 @@
             }
         }
 
+        function showCellWarning(invalidList) {
+            const toast = document.getElementById('warningToast');
+            const msg = document.getElementById('warningToastMsg');
+            if (!toast || !msg) return;
 
+            clearTimeout(warningTimeout);
 
-function showCellWarning(invalidList) {
-    const toast = document.getElementById('warningToast');
-    const msg = document.getElementById('warningToastMsg');
-    if (!toast || !msg) return;
+            let listHtml = invalidList
+                .slice(0, 4)
+                .map(item => `<div>• <span class="warning-toast-badge">${item.id}</span> (${item.len} digit)</div>`)
+                .join('');
 
-    clearTimeout(warningTimeout);
+            if (invalidList.length > 4) {
+                listHtml += `<div style="margin-top:2px; font-size:11px; color:#64748b;">+${invalidList.length - 4} ID lainnya...</div>`;
+            }
 
-    let listHtml = invalidList
-        .slice(0, 4)
-        .map(item => `<div>• <span class="warning-toast-badge">${item.id}</span> (${item.len} digit)</div>`)
-        .join('');
+            msg.innerHTML = `Cell ID wajib <b>10 digit</b>${listHtml}`;
+            toast.style.display = 'block';
 
-    if (invalidList.length > 4) {
-        listHtml += `<div style="margin-top:2px; font-size:11px; color:#64748b;">+${invalidList.length - 4} ID lainnya...</div>`;
-    }
+            warningTimeout = setTimeout(() => {
+                closeWarningToast();
+            }, 6000);
+        }
 
-    msg.innerHTML = `Cell ID wajib <b>10 digit</b>${listHtml}`;
-    toast.style.display = 'block';
-
-    warningTimeout = setTimeout(() => {
-        closeWarningToast();
-    }, 6000);
-}
-
-function closeWarningToast() {
-    const toast = document.getElementById('warningToast');
-    if (toast) toast.style.display = 'none';
-}
+        function closeWarningToast() {
+            const toast = document.getElementById('warningToast');
+            if (toast) toast.style.display = 'none';
+        }
         
         function setMode(mode, keepInput = false) {
             const prevMode = currentMode;
@@ -500,12 +497,12 @@ function closeWarningToast() {
             }
         }
 
-// Mengubah huruf pertama teks menjadi kapital
-function capitalizeFirst(text) {
-    if (!text) return '';
-    let trimmed = text.trim();
-    return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
-}
+        // Mengubah huruf pertama teks menjadi kapital
+        function capitalizeFirst(text) {
+            if (!text) return '';
+            let trimmed = text.trim();
+            return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+        }
         
         function cleanText(str) {
             if (!str) return '';
@@ -513,32 +510,31 @@ function capitalizeFirst(text) {
         }
 
         function extractBlock(keyword, text) {
-    if (!text || !keyword) return '';
-    const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const regex = new RegExp('(?:^|\\n)[\\s*_\\[\\]()#–-]*' + escaped + '[\\s*_\\[\\]()#–-]*[:=–-]\\s*(.*)', 'i');
-    const match = text.match(regex);
-    if (!match) return '';
-    
-    let rawVal = match[1] ? match[1].trim() : '';
+            if (!text || !keyword) return '';
+            const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const regex = new RegExp('(?:^|\\n)[\\s*_\\[\\]()#–-]*' + escaped + '[\\s*_\\[\\]()#–-]*[:=–-]\\s*(.*)', 'i');
+            const match = text.match(regex);
+            if (!match) return '';
+            
+            let rawVal = match[1] ? match[1].trim() : '';
 
-    // Jika eksplisit tanda strip '-', jangan cari ke baris bawah
-    if (/^[-–—]+$/.test(rawVal)) {
-        return '-';
-    }
+            // Jika tanda strip '-', jangan cari ke baris bawah
+            if (/^[-–—]+$/.test(rawVal)) {
+                return '-';
+            }
 
-    let val = cleanText(rawVal);
-    if (!val) {
-        let after = text.substring(match.index + match[0].length).trim();
-        let firstLine = after.split('\n')[0].trim();
+            let val = cleanText(rawVal);
+            if (!val) {
+                let after = text.substring(match.index + match[0].length).trim();
+                let firstLine = after.split('\n')[0].trim();
 
-        // Cegah mengambil baris bawah jika itu header lain (seperti "Action :")
-        if (/^[A-Za-z\s]+[:=–-]/i.test(firstLine)) {
-            return '-';
+                if (/^[A-Za-z\s]+[:=–-]/i.test(firstLine)) {
+                    return '-';
+                }
+                return cleanText(firstLine);
+            }
+            return cleanText(val);
         }
-        return cleanText(firstLine);
-    }
-    return cleanText(val);
-}
 
         function formatPicNames(rawPic) {
             if (!rawPic) return '';
@@ -571,214 +567,199 @@ function capitalizeFirst(text) {
         }
 
         // 1. FORMAT LOSSKEY
-       function formatDowntime(text) {
-    let section = extractBlock('Section', text);
-    let location = extractBlock('Location', text);
-    let problem = extractBlock('Problem', text);
-    let cause = extractBlock('Cause', text);
-    
-    let picRaw = extractBlock('PIC', text);
-    let pic = formatPicNames(picRaw);
+        function formatDowntime(text) {
+            let section = extractBlock('Section', text);
+            let location = extractBlock('Location', text);
+            let problem = extractBlock('Problem', text);
+            let cause = extractBlock('Cause', text);
+            
+            let picRaw = extractBlock('PIC', text);
+            let pic = formatPicNames(picRaw);
 
-    let matchPart = text.match(/(?:^|\n)[\s*_-]*Part Replacement[\s*_-]*[:=–-]?\s*(.*?)(?=\s*(?:\n|\bPIC\b|\bResult\b|\bStatus\b|\/\/|$))/i);
-    let partReplacement = matchPart ? cleanText(matchPart[1]) : '';
+            let matchPart = text.match(/(?:^|\n)[\s*_-]*Part Replacement[\s*_-]*[:=–-]?\s*(.*?)(?=\s*(?:\n|\bPIC\b|\bResult\b|\bStatus\b|\/\/|$))/i);
+            let partReplacement = matchPart ? cleanText(matchPart[1]) : '';
 
-    let lines = text.split('\n');
-    let isAction = false;
-    let actionOutput = [];
-    let currentNumber = 1;
+            let lines = text.split('\n');
+            let isAction = false;
+            let actionOutput = [];
+            let currentNumber = 1;
 
-    for (let line of lines) {
-        let trimmed = line.trim();
-        
-        // Mulai parsing saat menemukan header Action / Countermeasure
-        if (/^[\s*_-]*(Countermeasure|Action)[\s*_-]*[:=]?/i.test(trimmed)) {
-            isAction = true;
-            // Cek jika ada teks langsung di samping header "Action: xxx"
-            let afterHeader = trimmed.replace(/^[\s*_-]*(Countermeasure|Action)[\s*_-]*[:=]?/i, '').trim();
-            if (afterHeader.length > 0) {
-                // Periksa apakah ini bullet atau sub-judul
-                if (/^(\d+[.)]|[-*•])\s+/.test(afterHeader)) {
-                    let clean = afterHeader.replace(/^(\d+[.)]|[-*•])\s*/, '').replace(/[*_]/g, '').trim();
-                    if (clean) {
-                        actionOutput.push(`${currentNumber}. ${clean}`);
-                        currentNumber++;
+            for (let line of lines) {
+                let trimmed = line.trim();
+                
+                if (/^[\s*_-]*(Countermeasure|Action)[\s*_-]*[:=]?/i.test(trimmed)) {
+                    isAction = true;
+                    let afterHeader = trimmed.replace(/^[\s*_-]*(Countermeasure|Action)[\s*_-]*[:=]?/i, '').trim();
+                    if (afterHeader.length > 0) {
+                        if (/^(\d+[.)]|[-*•])\s+/.test(afterHeader)) {
+                            let clean = afterHeader.replace(/^(\d+[.)]|[-*•])\s*/, '').replace(/[*_]/g, '').trim();
+                            if (clean) {
+                                actionOutput.push(`${currentNumber}. ${clean}`);
+                                currentNumber++;
+                            }
+                        } else {
+                            actionOutput.push(afterHeader);
+                        }
                     }
-                } else {
-                    actionOutput.push(afterHeader);
+                    continue;
+                }
+
+                if (isAction) {
+                    if (/^[\s*_-]*(Part Replacement|PIC|Qty Defect|Start Time|End Time|Duration|Stop Status|Status|Note|Risk Range)[\s*_-]*[:=]/i.test(trimmed)) {
+                        isAction = false;
+                        continue;
+                    }
+
+                    if (trimmed.length > 0) {
+                        const hasBullet = /^(\d+[.)]|[-*•])\s+/.test(trimmed);
+                        const isSubHeaderWithColon = trimmed.endsWith(':') && trimmed.length < 50;
+
+                        if (hasBullet && !isSubHeaderWithColon) {
+                            let cleanAction = trimmed.replace(/^(\d+[.)]|[-*•])\s*/, '').replace(/[*_]/g, '').trim();
+                            if (cleanAction) {
+                                actionOutput.push(`${currentNumber}. ${cleanAction}`);
+                                currentNumber++;
+                            }
+                        } else {
+                            let headerText = trimmed.replace(/^[-*•]\s*/, '').trim();
+                            actionOutput.push(`\n${headerText}`);
+                            currentNumber = 1;
+                        }
+                    }
                 }
             }
-            continue;
-        }
 
-        if (isAction) {
-            // Berhenti jika sudah memasuki field berikutnya
-            if (/^[\s*_-]*(Part Replacement|PIC|Qty Defect|Start Time|End Time|Duration|Stop Status|Status|Note|Risk Range)[\s*_-]*[:=]/i.test(trimmed)) {
-    isAction = false;
-    continue;
-}
-
-            if (trimmed.length > 0) {
-                // Cek apakah baris DIAWALI bullet asli: - , * , • , atau angka seperti 1. , 1)
-                // Catatan: Baris yang diakhiri tanda ':' (seperti "- Check Point Tab Torn :") 
-                // seringkali adalah sub-header meskipun diawali strip.
-                const hasBullet = /^(\d+[.)]|[-*•])\s+/.test(trimmed);
-                const isSubHeaderWithColon = trimmed.endsWith(':') && trimmed.length < 50;
-
-                if (hasBullet && !isSubHeaderWithColon) {
-                    // INI AKSI (LANGKAH TINDAKAN) -> Beri nomor urut
-                    let cleanAction = trimmed.replace(/^(\d+[.)]|[-*•])\s*/, '').replace(/[*_]/g, '').trim();
-                    if (cleanAction) {
-                        actionOutput.push(`${currentNumber}. ${cleanAction}`);
-                        currentNumber++;
-                    }
-                } else {
-                    // INI SUB-HEADER / TEKS DI LUAR BULLET (misal: + NG 3 Ea, Step 1:, Catatan, dll)
-                    // Tidak diberi nomor dan otomatis mereset counter numbering
-                    let headerText = trimmed.replace(/^[-*•]\s*/, '').trim(); // bersihkan jika ada bullet nyasar di subheader
-                    actionOutput.push(`\n${headerText}`);
-                    currentNumber = 1; // Reset numbering untuk blok berikutnya
-                }
+            let result = `${section || 'Section'} // ${location || 'Location'} // ${problem || 'Problem'} //\n`;
+            if (cause && cause !== '-') {
+                result += `${cause} //\n`;
             }
-        }
-    }
-
-    let result = `${section || 'Section'} // ${location || 'Location'} // ${problem || 'Problem'} //\n`;
-    if (cause && cause !== '-') {
-        result += `${cause} //\n`;
-    }
-    result += `Action :`;
-    if (actionOutput.length > 0) {
-        result += `\n` + actionOutput.join('\n').trim();
-    }
-    
-    if (partReplacement && partReplacement !== '-' && !/^[:\s–-]+$/.test(partReplacement)) {
-        result += `\n\nPart Replacement: ${partReplacement}`;
-    }
-    
-    result += `\n//\nPIC : ${pic || '-'}`;
-    return result;
-}
-
-     // FORMAT WRINKLE (FIX BARIS KOSONG & KURUNG HILANG)
-function formatExcel(fullText) {
-    if (!fullText) return '';
-
-    fullText = fullText.replace(/\u00A0/g, ' ');
-
-    let blocks = [];
-    
-    // 1. Tangani baik [Problem Report] lengkap maupun Problem Report] tanpa kurung depan
-    if (/\[?Problem Report\]?/i.test(fullText)) {
-        let firstIndex = fullText.search(/\[?Problem Report\]?/i);
-        let cleanedFullText = firstIndex !== -1 ? fullText.substring(firstIndex) : fullText;
-
-        blocks = cleanedFullText
-            .split(/(?=\[?Problem Report\]?)/i)
-            .map(b => b.trim())
-            .filter(b => b.length > 0);
-    } else {
-        blocks = fullText
-            .split(/(?=(?:^|\n)\s*(?:Shift\s*\d+\s*)?(?:Line|PKG)\s*[:=–-])/i)
-            .map(b => b.trim())
-            .filter(b => b.length > 0);
-    }
-
-    if (blocks.length === 0) blocks = [fullText];
-
-    let allRows = [];
-
-    blocks.forEach(text => {
-        let line = extractBlock('Line', text);
-        if (!line) {
-            let matchLine = text.match(/(?:^|\n)\s*(?:Line|PKG)?\s*[:=–-]?\s*(PKG\s*[0-9]+-[0-9]+|[0-9]+-[0-9]+)/i);
-            if (matchLine) line = matchLine[1].toUpperCase();
+            result += `Action :`;
+            if (actionOutput.length > 0) {
+                result += `\n` + actionOutput.join('\n').trim();
+            }
+            
+            if (partReplacement && partReplacement !== '-' && !/^[:\s–-]+$/.test(partReplacement)) {
+                result += `\n\nPart Replacement: ${partReplacement}`;
+            }
+            
+            result += `\n//\nPIC : ${pic || '-'}`;
+            return result;
         }
 
-        // PENGAMAN: Jika blok teks sampah tidak memuat nomor Line valid, abaikan
-        if (!line) return;
+        // 2. FORMAT WRINKLE
+        function formatExcel(fullText) {
+            if (!fullText) return '';
 
-        let problem = extractBlock('Problem', text);
+            fullText = fullText.replace(/\u00A0/g, ' ');
 
-        let timeRaw = extractBlock('TIME', text) || extractBlock('Jam', text) || extractBlock('Waktu', text);
-        if (!timeRaw) {
-            let matchTimes = text.match(/\b\d{1,2}[.:]\d{2}\b/g);
-            if (matchTimes) timeRaw = matchTimes.join(' & ');
+            let blocks = [];
+            
+            if (/\[?Problem Report\]?/i.test(fullText)) {
+                let firstIndex = fullText.search(/\[?Problem Report\]?/i);
+                let cleanedFullText = firstIndex !== -1 ? fullText.substring(firstIndex) : fullText;
+
+                blocks = cleanedFullText
+                    .split(/(?=\[?Problem Report\]?)/i)
+                    .map(b => b.trim())
+                    .filter(b => b.length > 0);
+            } else {
+                blocks = fullText
+                    .split(/(?=(?:^|\n)\s*(?:Shift\s*\d+\s*)?(?:Line|PKG)\s*[:=–-])/i)
+                    .map(b => b.trim())
+                    .filter(b => b.length > 0);
+            }
+
+            if (blocks.length === 0) blocks = [fullText];
+
+            let allRows = [];
+
+            blocks.forEach(text => {
+                let line = extractBlock('Line', text);
+                if (!line) {
+                    let matchLine = text.match(/(?:^|\n)\s*(?:Line|PKG)?\s*[:=–-]?\s*(PKG\s*[0-9]+-[0-9]+|[0-9]+-[0-9]+)/i);
+                    if (matchLine) line = matchLine[1].toUpperCase();
+                }
+
+                if (!line) return;
+
+                let problem = extractBlock('Problem', text);
+
+                let timeRaw = extractBlock('TIME', text) || extractBlock('Jam', text) || extractBlock('Waktu', text);
+                if (!timeRaw) {
+                    let matchTimes = text.match(/\b\d{1,2}[.:]\d{2}\b/g);
+                    if (matchTimes) timeRaw = matchTimes.join(' & ');
+                }
+
+                let pouchId = extractBlock('Pouch ID', text) || extractBlock('Pouch Lot', text) || extractBlock('Pouch', text) || extractBlock('Lot Pouch', text);
+                let countRaw = extractBlock('Count', text);
+                
+                let picRaw = extractBlock('PIC', text);
+                if (picRaw) {
+                    picRaw = picRaw.replace(/\([^)]*\)/g, '').trim();
+                }
+                let pic = formatPicNames(picRaw);
+
+                let splitRegex = /[,\/;&]+|\b(?:dan|and)\b/i;
+                
+                let times = timeRaw
+                    ? timeRaw.split(splitRegex).map(t => t.trim().replace(/(\d{1,2})\.(\d{2})/, '$1:$2')).filter(t => t.length > 0)
+                    : [];
+                let counts = countRaw
+                    ? countRaw.split(splitRegex).map(c => c.trim().replace(/\./g, '')).filter(c => c.length > 0)
+                    : [];
+
+                let maxLen = Math.max(times.length, counts.length, 1);
+
+                for (let i = 0; i < maxLen; i++) {
+                    let t = times[i] !== undefined ? times[i] : (times[0] || '');
+                    let c = counts[i] !== undefined ? counts[i] : (counts[0] || '');
+                    allRows.push(`${line}\t${problem}\t${t}\t${pouchId}\t${c}\t${pic}`);
+                }
+            });
+
+            return allRows.join('\n').trim();
         }
 
-        let pouchId = extractBlock('Pouch ID', text) || extractBlock('Pouch Lot', text) || extractBlock('Pouch', text) || extractBlock('Lot Pouch', text);
-        let countRaw = extractBlock('Count', text);
-        
-        let picRaw = extractBlock('PIC', text);
-        if (picRaw) {
-            picRaw = picRaw.replace(/\([^)]*\)/g, '').trim();
+        // 3.A FORMAT CRACK - IMAGE (NAMING)
+        function formatVisionNaming(text) {
+            let lineMatch = text.match(/(?:Line|PKG)\s*[:=–-]?\s*([0-9]+[\.\-_][0-9]+)/i);
+            let line = lineMatch ? lineMatch[1].replace(/[\._]/g, '-') : '';
+
+            let jamRaw = extractBlock('Jam', text) || extractBlock('Time', text);
+            let lotId = extractBlock('Lot ID', text) || extractBlock('LotID', text);
+            let pouchLot = extractBlock('Pouch Lot', text) || extractBlock('Pouch ID', text);
+
+            let status = 'OVERKILL';
+            let lowerText = text.toLowerCase();
+            
+            if (lowerText.includes('real ng') || lowerText.includes('real')) {
+                status = 'REAL';
+            } else if (lowerText.includes('pinhole') || lowerText.includes('pin hole')) {
+                status = 'PINHOLE';
+            } else if (lowerText.includes('crack')) {
+                status = 'CRACK';
+            } else if (lowerText.includes('overkill')) {
+                status = 'OVERKILL';
+            } else if (lowerText.includes('ng')) {
+                status = 'NG';
+            }
+
+            let splitRegex = /[,\/;&]+|\b(?:dan|and)\b/i;
+            let jams = jamRaw
+                ? jamRaw.split(splitRegex).map(j => j.replace(/[^0-9]/g, '')).filter(j => j.length > 0)
+                : [];
+
+            if (jams.length === 0) {
+                return `${line}__${lotId}_${pouchLot}_${status}`;
+            }
+
+            return jams.map(j => `${line}_${j}_${lotId}_${pouchLot}_${status}`).join('\n');
         }
-        let pic = formatPicNames(picRaw);
 
-        let splitRegex = /[,\/;&]+|\b(?:dan|and)\b/i;
-        
-        let times = timeRaw
-            ? timeRaw.split(splitRegex).map(t => t.trim().replace(/(\d{1,2})\.(\d{2})/, '$1:$2')).filter(t => t.length > 0)
-            : [];
-        let counts = countRaw
-            ? countRaw.split(splitRegex).map(c => c.trim().replace(/\./g, '')).filter(c => c.length > 0)
-            : [];
-
-        let maxLen = Math.max(times.length, counts.length, 1);
-
-        for (let i = 0; i < maxLen; i++) {
-            let t = times[i] !== undefined ? times[i] : (times[0] || '');
-            let c = counts[i] !== undefined ? counts[i] : (counts[0] || '');
-            allRows.push(`${line}\t${problem}\t${t}\t${pouchId}\t${c}\t${pic}`);
-        }
-    });
-
-    return allRows.join('\n').trim();
-}
-
-       // 3.A FORMAT CRACK - IMAGE (NAMING)
-function formatVisionNaming(text) {
-  // Mengizinkan tanda titik (.) atau strip (-) dan otomatis diubah menjadi format standard (-)
-    let lineMatch = text.match(/(?:Line|PKG)\s*[:=–-]?\s*([0-9]+[\.\-_][0-9]+)/i);
-    let line = lineMatch ? lineMatch[1].replace(/[\._]/g, '-') : '';
-
-    let jamRaw = extractBlock('Jam', text) || extractBlock('Time', text);
-    let lotId = extractBlock('Lot ID', text) || extractBlock('LotID', text);
-    let pouchLot = extractBlock('Pouch Lot', text) || extractBlock('Pouch ID', text);
-
-    let status = 'OVERKILL';
-    let lowerText = text.toLowerCase();
-    
-    // Prioritaskan REAL jika terdeteksi 'real' atau 'real ng'
-    if (lowerText.includes('real ng') || lowerText.includes('real')) {
-        status = 'REAL';
-    } else if (lowerText.includes('pinhole') || lowerText.includes('pin hole')) {
-        status = 'PINHOLE';
-    } else if (lowerText.includes('crack')) {
-        status = 'CRACK';
-    } else if (lowerText.includes('overkill')) {
-        status = 'OVERKILL';
-    } else if (lowerText.includes('ng')) {
-        status = 'NG';
-    }
-
-    let splitRegex = /[,\/;&]+|\b(?:dan|and)\b/i;
-    let jams = jamRaw
-        ? jamRaw.split(splitRegex).map(j => j.replace(/[^0-9]/g, '')).filter(j => j.length > 0)
-        : [];
-
-    if (jams.length === 0) {
-        return `${line}__${lotId}_${pouchLot}_${status}`;
-    }
-
-    return jams.map(j => `${line}_${j}_${lotId}_${pouchLot}_${status}`).join('\n');
-}
-
-        // 3.B FORMAT CRACK - EXCEL - SUPPORT MULTIPLE DATA & PREVENT DATE FORMAT
+        // 3.B FORMAT CRACK - EXCEL
         function formatCrackExcel(text) {
-            // Mengizinkan tanda titik (.) atau strip (-) dan otomatis diubah menjadi format standard (-)
-let lineMatch = text.match(/(?:Line|PKG)\s*[:=–-]?\s*([0-9]+[\.\-_][0-9]+)/i);
-let line = lineMatch ? lineMatch[1].replace(/[\._]/g, '-') : extractBlock('Line', text).replace(/[\._]/g, '-');
+            let lineMatch = text.match(/(?:Line|PKG)\s*[:=–-]?\s*([0-9]+[\.\-_][0-9]+)/i);
+            let line = lineMatch ? lineMatch[1].replace(/[\._]/g, '-') : extractBlock('Line', text).replace(/[\._]/g, '-');
 
             let rawDate = extractBlock('Date', text) || extractBlock('Tanggal', text);
             if (!rawDate) {
@@ -851,369 +832,349 @@ let line = lineMatch ? lineMatch[1].replace(/[\._]/g, '-') : extractBlock('Line'
             return rows.join('\n');
         }
 
-   // FUNGSI KLASIFIKASI NG NAME (REWORK)
-function matchKlasifikasiNG(fullText, ngRaw) {
-    let cleanFull = (fullText || '').replace(/\u00A0/g, ' ');
-    let raw = (ngRaw || '').replace(/\u00A0/g, ' ');
+        // FUNGSI KLASIFIKASI NG NAME (REWORK)
+        function matchKlasifikasiNG(fullText, ngRaw) {
+            let cleanFull = (fullText || '').replace(/\u00A0/g, ' ');
+            let raw = (ngRaw || '').replace(/\u00A0/g, ' ');
 
-    // 1. Bersihkan isi kurung dari teks NG agar hanya tersisa nama NG intinya
-    let cleanedNg = raw.replace(/\(.*?\)/gi, '').trim();
-    let ng_lower = cleanedNg.replace(/[_-]/g, ' ').toLowerCase();
+            let cleanedNg = raw.replace(/\(.*?\)/gi, '').trim();
+            let ng_lower = cleanedNg.replace(/[_-]/g, ' ').toLowerCase();
 
-    // 2. Deteksi polaritas (+) / [+] atau (-) / [-] (Prioritaskan tanda di baris Tape Vision / NG)
-    let sign = '-';
-    let visionMatch = cleanFull.match(/(?:Tape\s*Vision|Vision|NG)[^\n]*?[\(\[]\s*([+-])\s*[\)\]]/i);
-    if (visionMatch) {
-        sign = visionMatch[1];
-    } else if (/[\(\[]\s*\+\s*[\)\]]|\bplus\b/i.test(cleanFull)) {
-        sign = '+';
-    } else if (/[\(\[]\s*-\s*[\)\]]|\bminus\b/i.test(cleanFull)) {
-        sign = '-';
-    }
+            let sign = '-';
+            let visionMatch = cleanFull.match(/(?:Tape\s*Vision|Vision|NG)[^\n]*?[\(\[]\s*([+-])\s*[\)\]]/i);
+            if (visionMatch) {
+                sign = visionMatch[1];
+            } else if (/[\(\[]\s*\+\s*[\)\]]|\bplus\b/i.test(cleanFull)) {
+                sign = '+';
+            } else if (/[\(\[]\s*-\s*[\)\]]|\bminus\b/i.test(cleanFull)) {
+                sign = '-';
+            }
 
-    // --- KLASIFIKASI PRIORITAS TINGGI ---
-    if (ng_lower.includes('weight before') || ng_lower.includes('before weight') || ng_lower.includes('before e/f') || ng_lower.includes('before ef')) {
-        return 'Weight Before E/F';
-    }
-    if (ng_lower === 'aw' || /\baw\b/i.test(ng_lower) || ng_lower.includes('weight after') || ng_lower.includes('after weight') || ng_lower.includes('after e/f') || ng_lower.includes('after ef')) {
-        return 'Weight After E/F';
-    }
-    
-    // Barcode / BCR
-    if (ng_lower.includes('bcr ng') || ng_lower.includes('barcode read') || ng_lower.includes('read ng') || ng_lower.includes('bcr') || ng_lower.includes('barcode verify') || ng_lower.includes('verify ng')) {
-        return 'IR Barcode Verify NG';
-    }
-    if (ng_lower.includes('it validation') || ng_lower.includes('barcode it')) {
-        return 'Barcode IT Validation';
-    }
-    
-    if (ng_lower.includes('ir contact')) {
-        return 'IR Contact';
-    }
-    if (/(ir\s*lc|lc)/i.test(ng_lower) || ng_lower.includes('lead contact') || ng_lower.includes('lead contect')) {
-        return 'Lead Contact';
-    }
-    if (ng_lower.includes('v sealing') || ng_lower.includes('v-sealing') || ng_lower.includes('vsealing')) {
-        return 'V Sealing';
-    }
+            if (ng_lower.includes('weight before') || ng_lower.includes('before weight') || ng_lower.includes('before e/f') || ng_lower.includes('before ef')) {
+                return 'Weight Before E/F';
+            }
+            if (ng_lower === 'aw' || /\baw\b/i.test(ng_lower) || ng_lower.includes('weight after') || ng_lower.includes('after weight') || ng_lower.includes('after e/f') || ng_lower.includes('after ef')) {
+                return 'Weight After E/F';
+            }
+            
+            if (ng_lower.includes('bcr ng') || ng_lower.includes('barcode read') || ng_lower.includes('read ng') || ng_lower.includes('bcr') || ng_lower.includes('barcode verify') || ng_lower.includes('verify ng')) {
+                return 'IR Barcode Verify NG';
+            }
+            if (ng_lower.includes('it validation') || ng_lower.includes('barcode it')) {
+                return 'Barcode IT Validation';
+            }
+            
+            if (ng_lower.includes('ir contact')) {
+                return 'IR Contact';
+            }
+            if (/(ir\s*lc|lc)/i.test(ng_lower) || ng_lower.includes('lead contact') || ng_lower.includes('lead contect')) {
+                return 'Lead Contact';
+            }
+            if (ng_lower.includes('v sealing') || ng_lower.includes('v-sealing') || ng_lower.includes('vsealing')) {
+                return 'V Sealing';
+            }
 
-   if (
-        ng_lower.includes('lead sealing') ||
-        ng_lower.includes('lead pos') || 
-        ng_lower.includes('leadpos') || 
-        ng_lower.includes('lead position') || 
-        ng_lower.includes('lead vision') || 
-        ng_lower.includes('vision lead')
-    ) {
-        return 'Lead Vision';
-    }
-    if (ng_lower.includes('sealing vision') || ng_lower.includes('sealing ng') || ng_lower.includes('sealing')) {
-        return 'Sealing Vision';
-    }
+            if (
+                ng_lower.includes('lead sealing') ||
+                ng_lower.includes('lead pos') || 
+                ng_lower.includes('leadpos') || 
+                ng_lower.includes('lead position') || 
+                ng_lower.includes('lead vision') || 
+                ng_lower.includes('vision lead')
+            ) {
+                return 'Lead Vision';
+            }
+            if (ng_lower.includes('sealing vision') || ng_lower.includes('sealing ng') || ng_lower.includes('sealing')) {
+                return 'Sealing Vision';
+            }
 
-    if (ng_lower.includes('wrong tab') || ng_lower.includes('tab direction') || ng_lower.includes('wrong direction')) {
-        return 'Wrong Tab Direction';
-    }
-    if (ng_lower.includes('no lead') || ng_lower.includes('nolead')) {
-        return 'No Lead';
-    }
-    if (ng_lower.includes('short contact') || ng_lower.includes('short check') || ng_lower.includes('short')) {
-        return 'Short Contact';
-    }
+            if (ng_lower.includes('wrong tab') || ng_lower.includes('tab direction') || ng_lower.includes('wrong direction')) {
+                return 'Wrong Tab Direction';
+            }
+            if (ng_lower.includes('no lead') || ng_lower.includes('nolead')) {
+                return 'No Lead';
+            }
+            if (ng_lower.includes('short contact') || ng_lower.includes('short check') || ng_lower.includes('short')) {
+                return 'Short Contact';
+            }
 
-    // Lead Film
-    if (/lead\s*fi?lm\d*/i.test(ng_lower) || (ng_lower.includes('lead') && ng_lower.includes('film'))) {
-        return `Lead Film (${sign})`;
-    }
+            if (/lead\s*fi?lm\d*/i.test(ng_lower) || (ng_lower.includes('lead') && ng_lower.includes('film'))) {
+                return `Lead Film (${sign})`;
+            }
 
-    // Lead R & Lead L
-    if (/lead\s*r(?![a-z])/i.test(ng_lower)) {
-        return `Lead R (${sign})`;
-    }
-    if (/lead\s*l(?![a-z])/i.test(ng_lower)) {
-        return `Lead L (${sign})`;
-    }
+            if (/lead\s*r(?![a-z])/i.test(ng_lower)) {
+                return `Lead R (${sign})`;
+            }
+            if (/lead\s*l(?![a-z])/i.test(ng_lower)) {
+                return `Lead L (${sign})`;
+            }
 
-    if (ng_lower.includes('tab burr') || ng_lower.includes('burr')) {
-        return `Tab Burr (${sign})`;
-    }
-    if (ng_lower.includes('tab press') || ng_lower.includes('press')) {
-        return `Tab Press (${sign})`;
-    }
-    if (ng_lower.includes('main weld') || ng_lower.includes('mainweld') || ng_lower.includes('main_weld')) {
-        return `Main Weld (${sign})`;
-    }
-    if (ng_lower.includes('sepa') || ng_lower.includes('separator')) {
-        return `Sepa (${sign})`;
-    }
-    if (ng_lower.includes('cpp tape') || ng_lower.includes('tape') || ng_lower.includes('cpp')) {
-        return `CPP Tape (${sign})`;
-    }
-    if (ng_lower.includes('gap')) {
-        return `GAP (${sign})`;
-    }
+            if (ng_lower.includes('tab burr') || ng_lower.includes('burr')) {
+                return `Tab Burr (${sign})`;
+            }
+            if (ng_lower.includes('tab press') || ng_lower.includes('press')) {
+                return `Tab Press (${sign})`;
+            }
+            if (ng_lower.includes('main weld') || ng_lower.includes('mainweld') || ng_lower.includes('main_weld')) {
+                return `Main Weld (${sign})`;
+            }
+            if (ng_lower.includes('sepa') || ng_lower.includes('separator')) {
+                return `Sepa (${sign})`;
+            }
+            if (ng_lower.includes('cpp tape') || ng_lower.includes('tape') || ng_lower.includes('cpp')) {
+                return `CPP Tape (${sign})`;
+            }
+            if (ng_lower.includes('gap')) {
+                return `GAP (${sign})`;
+            }
 
-    // DIMENSION OVERKILL (MENDUKUNG: BDIM, B-DIM, B DIM, HDIM, H-DIM, H DIM, OVERKILL)
-    if (
-        /\b[bh]\s*dim\b/i.test(ng_lower) ||
-        ng_lower.includes('bdim') ||
-        ng_lower.includes('hdim') ||
-        ng_lower.includes('dimension') ||
-        ng_lower.startsWith('overkill') ||
-        ng_lower === 'overkill' ||
-        raw.toLowerCase().includes('overkill')
-    ) {
-        return `Dimension Overkill (${sign})`;
-    }
+            if (
+                /\b[bh]\s*dim\b/i.test(ng_lower) ||
+                ng_lower.includes('bdim') ||
+                ng_lower.includes('hdim') ||
+                ng_lower.includes('dimension') ||
+                ng_lower.startsWith('overkill') ||
+                ng_lower === 'overkill' ||
+                raw.toLowerCase().includes('overkill')
+            ) {
+                return `Dimension Overkill (${sign})`;
+            }
 
-    return raw;
-}
-
-// 4. FORMAT REWORK (MENDUKUNG MULTI-LAPORAN & CELL ID BANYAK BARIS)
-function formatRework(fullText) {
-    if (!fullText) return '';
-
-    fullText = fullText.replace(/\u00A0/g, ' ');
-    
-    let blocks = [];
-
-    // Prioritas pemecahan blok laporan:
-    // 1. Jika ada kata kunci 'Rework DD/MM/YYYY' (baik diawali timestamp WA maupun tidak)
-    if (/Rework\s+\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}/i.test(fullText)) {
-        blocks = fullText
-            .split(/(?=(?:^|\n)\s*(?:\[\d{1,2}[:.]\d{2}[^\]]*\][^\n]*\s*)?Rework\s+\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4})/i)
-            .map(b => b.trim())
-            .filter(b => b.length > 0);
-    } else if (/\[\d{1,2}[:.]\d{2}[^\]]*\]/i.test(fullText)) {
-        blocks = fullText
-            .split(/(?=\[\d{1,2}[:.]\d{2}[^\]]*\])/i)
-            .map(b => b.trim())
-            .filter(b => b.length > 0);
-    } else if (/\[(?:Rework\vert{}Problem Report)\]/i.test(fullText)) {
-        blocks = fullText
-            .split(/(?=\[(?:Rework\vert{}Problem Report)\])/i)
-            .map(b => b.trim())
-            .filter(b => b.length > 0);
-    } else {
-        blocks = fullText
-            .split(/(?=(?:^|\n)\s*(?:#\s*PKG|PKG\s*\d+-\d+|Line\s*[:=–-]|#(?:[0-9]+-[0-9]+)))/i)
-            .map(b => b.trim())
-            .filter(b => b.length > 0);
-    }
-
-    if (blocks.length === 0) blocks = [fullText];
-
-    let allResults = [];
-    let invalidCellIds = [];
-      
-    blocks.forEach(text => {
-        let lineMatch = text.match(/(?:^|\n)\s*(?:#|Line\s*[:=–-]|PKG)?\s*([0-9]+-[0-9]+)/i);
-        let line = lineMatch ? `PKG ${lineMatch[1]}` : '';
-
-        if (!line) return;
-
-        let ngRaw = extractBlock('NG', text);
-        if (!ngRaw) {
-            let matchNg = text.match(/(?:^|\n)[\s*•_–.-]*NG\s*[:=–-]?\s*(.*)/i);
-            if (matchNg) ngRaw = cleanText(matchNg[1]);
+            return raw;
         }
-        let ngName = matchKlasifikasiNG(text, ngRaw);
 
-       let section = 'TW';
-        let lowerText = text.toLowerCase();
-        let lowerNg = (ngName || '').toLowerCase();
+        // 4. FORMAT REWORK
+        function formatRework(fullText) {
+            if (!fullText) return '';
 
-        if (
-            lowerText.includes('el filling') ||
-            lowerText.includes('filling') ||
-            /\bel\b/i.test(lowerText) ||
-            lowerText.includes('e/f') ||
-            lowerNg.includes('barcode') ||
-            lowerNg.includes('bcr') ||
-            lowerNg.includes('weight') ||
-            lowerNg.includes('ir contact') ||
-            lowerNg.includes('lead contact') ||
-            lowerNg.includes('v sealing')
-        ) {
-            section = 'EL';
-        } else if (
-            lowerText.includes('cell assy') || 
-            lowerText.includes('ca') || 
-            lowerNg.includes('sealing vision') || 
-            lowerNg.includes('lead vision')
-        ) {
-            section = 'CA';
-        } else {
-            section = 'TW';
-        }
-          let detailReason = '';
-        let matchReason = text.match(/(?:^|\n)[\s*•_–.-]*Reason\s*[:=–-]?\s*([^\n]+(?:\n(?!\s*[-*•_–.]*(?:PIC|Total|Status|Cell|NG)\b)[^\n]+)*)/i);
-        if (matchReason) {
-            detailReason = matchReason[1].replace(/\s+/g, ' ').trim();
-        }
-  // EKSTRAKSI CELL ID (MEMBERSIHKAN PENOMORAN 1., 2., DLL SERTA SPASI GAIB)
-        let cellIds = [];
-        let matchCellBlock = text.match(/(?:^|\n)[\s*•_–.-]*Cell\s*[-_]?\s*ID\s*[:=–-]?\s*([\s\S]*?)(?=\s*(?:\n[\s*•_–.-]*(?:total|status|pic|cc|note|shift|ng|section|reason)\b|$))/i);
+            fullText = fullText.replace(/\u00A0/g, ' ');
+            
+            let blocks = [];
 
-        if (matchCellBlock && matchCellBlock[1].trim()) {
-            // Bersihkan zero-width space dan non-breaking space
-            let rawCellText = matchCellBlock[1].replace(/[\u200B-\u200D\uFEFF]/g, '').replace(/\u00A0/g, ' ').trim();
-            let rawLines = rawCellText.split('\n');
+            if (/Rework\s+\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}/i.test(fullText)) {
+                blocks = fullText
+                    .split(/(?=(?:^|\n)\s*(?:\[\d{1,2}[:.]\d{2}[^\]]*\][^\n]*\s*)?Rework\s+\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4})/i)
+                    .map(b => b.trim())
+                    .filter(b => b.length > 0);
+            } else if (/\[\d{1,2}[:.]\d{2}[^\]]*\]/i.test(fullText)) {
+                blocks = fullText
+                    .split(/(?=\[\d{1,2}[:.]\d{2}[^\]]*\])/i)
+                    .map(b => b.trim())
+                    .filter(b => b.length > 0);
+            } else if (/\[(?:Rework\vert{}Problem Report)\]/i.test(fullText)) {
+                blocks = fullText
+                    .split(/(?=\[(?:Rework\vert{}Problem Report)\])/i)
+                    .map(b => b.trim())
+                    .filter(b => b.length > 0);
+            } else {
+                blocks = fullText
+                    .split(/(?=(?:^|\n)\s*(?:#\s*PKG|PKG\s*\d+-\d+|Line\s*[:=–-]|#(?:[0-9]+-[0-9]+)))/i)
+                    .map(b => b.trim())
+                    .filter(b => b.length > 0);
+            }
 
-            rawLines.forEach(l => {
-                // 1. Bersihkan bullet dan nomor urut di awal baris (misal: "1.", "1)", "•")
-                let cleaned = l.replace(/^[•\s*_\-–]+/, '')
-                               .replace(/^\d+[\.\)]\s*/, '')
-                               .trim();
+            if (blocks.length === 0) blocks = [fullText];
 
-                // 2. Lewati jika baris memuat label keterangan lain
-                if (cleaned && !/^(?:total|status|pic|cc|note|shift|ng|section|reason)\b/i.test(cleaned)) {
-                    // Pecah berdasarkan koma, spasi, atau pemisah lain
-                    let parts = cleaned.split(/[,;\s/&]+|\b(?:dan|and)\b/i);
-                    parts.forEach(p => {
-                        let id = p.trim();
-                        // Buang sisa tanda titik/simbol di ujung ID jika ada
-                        id = id.replace(/^[^\w]+|[^\w]+$/g, '');
-                        
-                        // Abaikan jika hanya berupa angka nomor urut murni atau kata keterangan
-                        if (id && !/^\d+$/.test(id) && !/^(?:ea|pcs|pc|total|ok|ng)$/i.test(id)) {
-                            cellIds.push(id);
+            let allResults = [];
+            let invalidCellIds = [];
+              
+            blocks.forEach(text => {
+                let lineMatch = text.match(/(?:^|\n)\s*(?:#|Line\s*[:=–-]|PKG)?\s*([0-9]+-[0-9]+)/i);
+                let line = lineMatch ? `PKG ${lineMatch[1]}` : '';
+
+                if (!line) return;
+
+                let ngRaw = extractBlock('NG', text);
+                if (!ngRaw) {
+                    let matchNg = text.match(/(?:^|\n)[\s*•_–.-]*NG\s*[:=–-]?\s*(.*)/i);
+                    if (matchNg) ngRaw = cleanText(matchNg[1]);
+                }
+                let ngName = matchKlasifikasiNG(text, ngRaw);
+
+                let section = 'TW';
+                let lowerText = text.toLowerCase();
+                let lowerNg = (ngName || '').toLowerCase();
+
+                if (
+                    lowerText.includes('el filling') ||
+                    lowerText.includes('filling') ||
+                    /\bel\b/i.test(lowerText) ||
+                    lowerText.includes('e/f') ||
+                    lowerNg.includes('barcode') ||
+                    lowerNg.includes('bcr') ||
+                    lowerNg.includes('weight') ||
+                    lowerNg.includes('ir contact') ||
+                    lowerNg.includes('lead contact') ||
+                    lowerNg.includes('v sealing')
+                ) {
+                    section = 'EL';
+                } else if (
+                    lowerText.includes('cell assy') || 
+                    lowerText.includes('ca') || 
+                    lowerNg.includes('sealing vision') || 
+                    lowerNg.includes('lead vision')
+                ) {
+                    section = 'CA';
+                } else {
+                    section = 'TW';
+                }
+
+                // EKSTRAKSI REASON / DETAIL REASON
+                let detailReason = '';
+                let matchReason = text.match(/(?:^|\n)[\s*•_–.-]*Reason\s*[:=–-]?\s*([^\n]+(?:\n(?!\s*[-*•_–.]*(?:PIC|Total|Status|Cell|NG)\b)[^\n]+)*)/i);
+                if (matchReason) {
+                    detailReason = matchReason[1].replace(/\s+/g, ' ').trim();
+                }
+
+                // EKSTRAKSI CELL ID (MEMBERSIHKAN PENOMORAN 1., 2., DLL SERTA SPASI GAIB)
+                let cellIds = [];
+                let matchCellBlock = text.match(/(?:^|\n)[\s*•_–.-]*Cell\s*[-_]?\s*ID\s*[:=–-]?\s*([\s\S]*?)(?=\s*(?:\n[\s*•_–.-]*(?:total|status|pic|cc|note|shift|ng|section|reason)\b|$))/i);
+
+                if (matchCellBlock && matchCellBlock[1].trim()) {
+                    let rawCellText = matchCellBlock[1].replace(/[\u200B-\u200D\uFEFF]/g, '').replace(/\u00A0/g, ' ').trim();
+                    let rawLines = rawCellText.split('\n');
+
+                    rawLines.forEach(l => {
+                        let cleaned = l.replace(/^[•\s*_\-–]+/, '')
+                                       .replace(/^\d+[\.\)]\s*/, '')
+                                       .trim();
+
+                        if (cleaned && !/^(?:total|status|pic|cc|note|shift|ng|section|reason)\b/i.test(cleaned)) {
+                            let parts = cleaned.split(/[,;\s/&]+|\b(?:dan|and)\b/i);
+                            parts.forEach(p => {
+                                let id = p.trim();
+                                id = id.replace(/^[^\w]+|[^\w]+$/g, '');
+                                
+                                if (id && !/^\d+$/.test(id) && !/^(?:ea\vert{}pcs\vert{}pc\vert{}total\vert{}ok\vert{}ng)$/i.test(id)) {
+                                    cellIds.push(id);
+                                }
+                            });
                         }
                     });
                 }
+
+                let statusRaw = extractBlock('Status', text);
+                let isFailed = /fail|❌|gagal|\bNG\b/i.test(statusRaw);
+                let status = isFailed ? 'N' : 'Y';
+                let reason = '';
+
+                // Jika failed dan belum ada detailReason dari label 'Reason', cari dari baris NOTE atau Status
+                if (isFailed && !detailReason) {
+                    let matchNote = text.match(/(?:^|\n)[\s*•_–.-]*NOTE\s*[:=–-]?\s*(.*?)(?=\s*(?:\n\s*(?:Cc\b|PIC\b|Status\b|Total\b)|$))/is);
+                    if (matchNote && matchNote[1].trim()) {
+                        detailReason = matchNote[1].split('\n')[0].trim();
+                    } else {
+                        let matchDetail = statusRaw.match(/^[^(]*\((.*)\)[^)]*$/);
+                        if (matchDetail) {
+                            detailReason = matchDetail[1].trim();
+                        } else {
+                            detailReason = statusRaw.replace(/fail(ed)?|❌|gagal|status|[:=]/gi, '').trim();
+                        }
+                    }
+                }
+
+                let picRaw = extractBlock('PIC', text);
+                if (picRaw) {
+                    picRaw = picRaw.replace(/\([^)]*\)/g, '').trim();
+                }
+                let pic = formatPicNames(picRaw);
+
+                let lotId = extractBlock('Lot ID', text) || extractBlock('LotID', text) || '';
+
+                if (cellIds.length === 0) cellIds = [''];
+
+                cellIds.forEach(cellId => {
+                    if (cellId !== '' && cellId.length !== 10) {
+                        invalidCellIds.push({ id: cellId, len: cellId.length });
+                    }
+
+                    let pkgId = (section === 'EL') ? cellId : '';
+                    let stkId = (section === 'TW' || section === 'CA') ? cellId : '';
+
+                    let row = [
+                        line,
+                        section,
+                        ngName,
+                        lotId,
+                        pkgId,
+                        stkId,
+                        status,
+                        reason,
+                        detailReason,
+                        pic
+                    ].map(col => (col || '').toString().replace(/[\r\n]+/g, ' ').trim());
+
+                    allResults.push(row.join('\t'));
+                });
             });
-        }
 
-        let statusRaw = extractBlock('Status', text);
-        let isFailed = /fail|❌|gagal|\bNG\b/i.test(statusRaw);
-        let status = isFailed ? 'F' : 'Y';
-
-        let reason = '';
-        let detailReason = '';
-
-        if (isFailed) {
-            let matchNote = text.match(/(?:^|\n)[\s*•_–.-]*NOTE\s*[:=–-]?\s*(.*?)(?=\s*(?:\n\s*(?:Cc\b|PIC\b|Status\b|Total\b)|$))/is);
-            if (matchNote && matchNote[1].trim()) {
-                detailReason = matchNote[1].split('\n')[0].trim();
+            if (invalidCellIds.length > 0) {
+                showCellWarning(invalidCellIds);
+                return '';
             } else {
-                let matchDetail = statusRaw.match(/^[^(]*\((.*)\)[^)]*$/);
-                if (matchDetail) {
-                    detailReason = matchDetail[1].trim();
-                } else {
-                    detailReason = statusRaw.replace(/fail(ed)?|❌|gagal|status|[:=]/gi, '').trim();
+                closeWarningToast();
+            }
+
+            return allResults.join('\n');
+        }
+        
+        // 5. FORMAT TOP 5
+        function formatTop5(text) {
+            let lineMatch = text.match(/(?:Line\s*ID|Line|PKG)\s*[:=–-]?\s*([0-9]+-[0-9]+)/i);
+            let line = lineMatch ? lineMatch[1] : '';
+
+            let rootCause = extractBlock('Cause', text) || extractBlock('Root Cause', text);
+            
+            if (!rootCause || rootCause.trim() === '-' || /^action\b/i.test(rootCause.trim())) {
+                rootCause = '-';
+            } else {
+                rootCause = capitalizeFirst(rootCause);
+            }
+
+            let picRaw = extractBlock('PIC', text);
+            let pic = formatPicNames(picRaw);
+
+            let rawActions = [];
+            let lines = text.split('\n');
+            let isAction = false;
+
+            for (let l of lines) {
+                let trimmed = l.trim();
+                
+                if (/^[\s*_-]*(Countermeasure|Action|Adjustment)[\s*_-]*[:=]?/i.test(trimmed)) {
+                    isAction = true;
+                    let afterHeader = trimmed.replace(/^[\s*_-]*(Countermeasure|Action|Adjustment)[\s*_-]*[:=]?/i, '').trim();
+                    if (afterHeader.length > 0) {
+                        let clean = afterHeader.replace(/^(\d+[.)]|[-*•])\s*/, '').replace(/[*_]/g, '').trim();
+                        if (clean) rawActions.push(clean);
+                    }
+                    continue;
+                }
+
+                if (isAction) {
+                    if (/^[\s*_-]*(Part Replacement|PIC|Qty Defect|Start Time|End Time|Duration|Stop Status|Status|Note|Risk Range)[\s*_-]*[:=]/i.test(trimmed)) {
+                        isAction = false;
+                        continue;
+                    }
+
+                    if (trimmed.length > 0) {
+                        let cleanAction = trimmed.replace(/^(\d+[.)]|[-*•])\s*/, '').replace(/[*_]/g, '').trim();
+                        if (cleanAction) rawActions.push(cleanAction);
+                    }
                 }
             }
-            reason = '';
-        }
 
-        let picRaw = extractBlock('PIC', text);
-        if (picRaw) {
-            picRaw = picRaw.replace(/\([^)]*\)/g, '').trim();
-        }
-        let pic = formatPicNames(picRaw);
-
-        let lotId = extractBlock('Lot ID', text) || extractBlock('LotID', text) || '';
-
-        if (cellIds.length === 0) cellIds = [''];
-
-        cellIds.forEach(cellId => {
-            // Validasi standar 10 karakter
-            if (cellId !== '' && cellId.length !== 10) {
-                invalidCellIds.push({ id: cellId, len: cellId.length });
+            // Kapitalisasi otomatis huruf pertama di setiap poin adjustment
+            let formattedAdjustment = rawActions.map(act => `- ${capitalizeFirst(act)}`).join('\n');
+            
+            if (pic) {
+                formattedAdjustment += (formattedAdjustment ? '\n\n' : '') + `PIC : ${pic}`;
             }
 
-            let pkgId = (section === 'EL') ? cellId : '';
-            let stkId = (section === 'TW' || section === 'CA') ? cellId : '';
+            let safeAdjustment = `"${formattedAdjustment.replace(/"/g, '""')}"`;
 
-            let row = [
-                line,
-                section,
-                ngName,
-                lotId,
-                pkgId,
-                stkId,
-                status,
-                reason,
-                detailReason,
-                pic
-            ].map(col => (col || '').toString().replace(/[\r\n]+/g, ' ').trim());
-
-            allResults.push(row.join('\t'));
-        });
-    });
-
-    // Jika ada Cell ID yang tidak 10 digit, kosongkan output total
-    if (invalidCellIds.length > 0) {
-        showCellWarning(invalidCellIds);
-        return '';
-    } else {
-        closeWarningToast();
-    }
-
-    return allResults.join('\n');
-}
-        
-        // FORMAT TOP 5
-function formatTop5(text) {
-    let lineMatch = text.match(/(?:Line\s*ID|Line|PKG)\s*[:=–-]?\s*([0-9]+-[0-9]+)/i);
-    let line = lineMatch ? lineMatch[1] : '';
-    let adjustment = capitalizeFirst(rawAdjustment);
-
-    let rootCause = extractBlock('Cause', text) || extractBlock('Root Cause', text);
-    
-    // Cegah Cause bocor jika bernilai strip '-' atau kosong murni
-    if (!rootCause || rootCause.trim() === '-' || /^action\b/i.test(rootCause.trim())) {
-        rootCause = '-';
-    } else {
-        rootCause = rootCause.charAt(0).toUpperCase() + rootCause.slice(1);
-    }
-
-    let picRaw = extractBlock('PIC', text);
-    let pic = formatPicNames(picRaw);
-
-    let rawActions = [];
-    let lines = text.split('\n');
-    let isAction = false;
-
-    for (let l of lines) {
-        let trimmed = l.trim();
-        
-        // Membaca awal Action / Countermeasure
-        if (/^[\s*_-]*(Countermeasure|Action|Adjustment)[\s*_-]*[:=]?/i.test(trimmed)) {
-            isAction = true;
-            let afterHeader = trimmed.replace(/^[\s*_-]*(Countermeasure|Action|Adjustment)[\s*_-]*[:=]?/i, '').trim();
-            if (afterHeader.length > 0) {
-                let clean = afterHeader.replace(/^(\d+[.)]|[-*•])\s*/, '').replace(/[*_]/g, '').trim();
-                if (clean) rawActions.push(clean);
-            }
-            continue;
+            return `="${line}"\t${rootCause}\t${safeAdjustment}`;
         }
-
-        if (isAction) {
-            // "Result" SUDAH DIHAPUS dari regex ini agar tindakan di bawah 'Result : still NG' tidak terputus
-            if (/^[\s*_-]*(Part Replacement|PIC|Qty Defect|Start Time|End Time|Duration|Stop Status|Status|Note|Risk Range)[\s*_-]*[:=]/i.test(trimmed)) {
-                isAction = false;
-                continue;
-            }
-
-            if (trimmed.length > 0) {
-                // Ambil bullet tindakan maupun baris subheader seperti 'Result : still NG'
-                let cleanAction = trimmed.replace(/^(\d+[.)]|[-*•])\s*/, '').replace(/[*_]/g, '').trim();
-                if (cleanAction) rawActions.push(cleanAction);
-            }
-        }
-    }
-
-    let formattedAdjustment = rawActions.map(act => `- ${act}`).join('\n');
-    
-    if (pic) {
-        formattedAdjustment += (formattedAdjustment ? '\n\n' : '') + `PIC : ${pic}`;
-    }
-
-    let safeAdjustment = `"${formattedAdjustment.replace(/"/g, '""')}"`;
-
-    return `="${line}"\t${rootCause}\t${safeAdjustment}`;
-}
 
         function showToast() {
             const toast = document.getElementById('toast');
@@ -1278,53 +1239,49 @@ function formatTop5(text) {
             copyOutput();
         }
 
-       function autoDetectMode(text) {
-    if (!text || text.trim().length < 4) return;
-    
-    let clean = text.replace(/\u00A0/g, ' ');
-    let lower = clean.toLowerCase();
+        function autoDetectMode(text) {
+            if (!text || text.trim().length < 4) return;
+            
+            let clean = text.replace(/\u00A0/g, ' ');
+            let lower = clean.toLowerCase();
 
-    // 1. Prioritaskan Losskey / Downtime
-    const hasDowntimeMarkers = 
-        lower.includes('downtime bot') || 
-        lower.includes('countermeasure') || 
-        /section\s*[:=–-]/i.test(clean) ||
-        /location\s*[:=–-]/i.test(clean) ||
-        (lower.includes('start time') && lower.includes('qty defect')) ||
-        (lower.includes('start time') && lower.includes('duration'));
+            const hasDowntimeMarkers = 
+                lower.includes('downtime bot') || 
+                lower.includes('countermeasure') || 
+                /section\s*[:=–-]/i.test(clean) ||
+                /location\s*[:=–-]/i.test(clean) ||
+                (lower.includes('start time') && lower.includes('qty defect')) ||
+                (lower.includes('start time') && lower.includes('duration'));
 
-    if (hasDowntimeMarkers) {
-        if (currentMode !== 'top5' && currentMode !== 'downtime') {
-            setMode('downtime', true);
+            if (hasDowntimeMarkers) {
+                if (currentMode !== 'top5' && currentMode !== 'downtime') {
+                    setMode('downtime', true);
+                }
+                return;
+            }
+
+            const isExplicitRework = 
+                lower.includes('cell id') || 
+                lower.includes('cellid') || 
+                /\[rework\]/i.test(clean) ||
+                /(?:^|\n)\s*rework\b/i.test(clean) ||
+                /(?:^|\n)\s*ng\s*[:=–-]\s*(?!.*\bea\b)/i.test(clean);
+
+            if (isExplicitRework) {
+                if (currentMode !== 'rework') setMode('rework', true);
+                return;
+            }
+
+            if (lower.includes('crack') || lower.includes('pinhole') || (lower.includes('lot id') && lower.includes('pouch lot'))) {
+                if (currentMode !== 'crack') setMode('crack', true);
+                return;
+            }
+
+            if ((lower.includes('pouch id') || lower.includes('pouch lot')) && (lower.includes('count') || /\b\d{1,2}[.:]\d{2}\b/.test(clean))) {
+                if (currentMode !== 'excel') setMode('excel', true);
+                return;
+            }
         }
-        return;
-    }
-
-    // 2. Deteksi Rework (khusus laporan cell defect / rework riil)
-    const isExplicitRework = 
-        lower.includes('cell id') || 
-        lower.includes('cellid') || 
-        /\[rework\]/i.test(clean) ||
-        /(?:^|\n)\s*rework\b/i.test(clean) ||
-        /(?:^|\n)\s*ng\s*[:=–-]\s*(?!.*\bea\b)/i.test(clean); // Hindari NG : 1 Ea
-
-    if (isExplicitRework) {
-        if (currentMode !== 'rework') setMode('rework', true);
-        return;
-    }
-
-    // 3. Deteksi Crack
-    if (lower.includes('crack') || lower.includes('pinhole') || (lower.includes('lot id') && lower.includes('pouch lot'))) {
-        if (currentMode !== 'crack') setMode('crack', true);
-        return;
-    }
-
-    // 4. Deteksi Wrinkle
-    if ((lower.includes('pouch id') || lower.includes('pouch lot')) && (lower.includes('count') || /\b\d{1,2}[.:]\d{2}\b/.test(clean))) {
-        if (currentMode !== 'excel') setMode('excel', true);
-        return;
-    }
-}
 
         const inputArea = document.getElementById('inputText');
         if (inputArea) {
