@@ -961,7 +961,7 @@
                     .split(/(?=\[\d{1,2}[:.]\d{2}[^\]]*\])/i)
                     .map(b => b.trim())
                     .filter(b => b.length > 0);
-            } else if (/\[(?:Rework\vert{}Problem Report)\]/i.test(fullText)) {
+            } else if (/\[(?:Rework|Problem Report)\]/i.test(fullText)) {
                 blocks = fullText
                     .split(/(?=\[(?:Rework\vert{}Problem Report)\])/i)
                     .map(b => b.trim())
