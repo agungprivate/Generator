@@ -974,7 +974,7 @@ function formatRework(fullText) {
     if (!fullText) return '';
 
     fullText = fullText.replace(/\u00A0/g, ' ');
-
+    
     let blocks = [];
 
     // Prioritas pemecahan blok laporan:
@@ -1005,7 +1005,7 @@ function formatRework(fullText) {
 
     let allResults = [];
     let invalidCellIds = [];
-
+      
     blocks.forEach(text => {
         let lineMatch = text.match(/(?:^|\n)\s*(?:#|Line\s*[:=–-]|PKG)?\s*([0-9]+-[0-9]+)/i);
         let line = lineMatch ? `PKG ${lineMatch[1]}` : '';
@@ -1046,7 +1046,11 @@ function formatRework(fullText) {
         } else {
             section = 'TW';
         }
-
+          let detailReason = '';
+        let matchReason = text.match(/(?:^|\n)[\s*•_–.-]*Reason\s*[:=–-]?\s*([^\n]+(?:\n(?!\s*[-*•_–.]*(?:PIC|Total|Status|Cell|NG)\b)[^\n]+)*)/i);
+        if (matchReason) {
+            detailReason = matchReason[1].replace(/\s+/g, ' ').trim();
+        }
   // EKSTRAKSI CELL ID (MEMBERSIHKAN PENOMORAN 1., 2., DLL SERTA SPASI GAIB)
         let cellIds = [];
         let matchCellBlock = text.match(/(?:^|\n)[\s*•_–.-]*Cell\s*[-_]?\s*ID\s*[:=–-]?\s*([\s\S]*?)(?=\s*(?:\n[\s*•_–.-]*(?:total|status|pic|cc|note|shift|ng|section|reason)\b|$))/i);
