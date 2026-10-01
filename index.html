@@ -1055,7 +1055,7 @@
 
                 let statusRaw = extractBlock('Status', text);
                 let isFailed = /fail|❌|gagal|\bNG\b/i.test(statusRaw);
-                let status = isFailed ? 'N' : 'Y';
+                let status = isFailed ? 'F' : 'Y';
                 let reason = '';
 
                 // Jika failed dan belum ada detailReason dari label 'Reason', cari dari baris NOTE atau Status
