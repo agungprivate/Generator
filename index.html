@@ -826,7 +826,7 @@
             for (let i = 0; i < maxLen; i++) {
                 let t = times[i] !== undefined ? times[i] : (times[0] || '');
                 let c = counts[i] !== undefined ? counts[i] : (counts[0] || '');
-                rows.push(`="${line}"\t${date}\t${t}\t${c}\t${lotId}\t${pouchLot}\t< 1\t< 1`);
+               rows.push(`="${line}"\t${date}\t${t}\t${c}\t${lotId}\t${pouchLot}\t< 1\t< 1`);
             }
 
             return rows.join('\n');
