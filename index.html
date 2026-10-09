@@ -984,11 +984,30 @@
 
                 if (!line) return;
 
-                let ngRaw = extractBlock('NG', text);
-                if (!ngRaw) {
-                    let matchNg = text.match(/(?:^|\n)[\s*•_–.-]*NG\s*[:=–-]?\s*(.*)/i);
-                    if (matchNg) ngRaw = cleanText(matchNg[1]);
-                }
+              let ngRaw = extractBlock('NG', text);
+if (!ngRaw) {
+    let matchNg = text.match(/(?:^|\n)[\s*•_–.-]*NG\s*[:=–-]?\s*(.*)/i);
+    if (matchNg) {
+        ngRaw = cleanText(matchNg[1]);
+    }
+}
+
+// FALLBACK: Jika label "NG :" tidak ditemukan, cari baris deskripsi defect setelah Shift / Line sebelum Cell ID
+if (!ngRaw) {
+    let lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+    for (let line of lines) {
+        // Abaikan baris header umum
+        if (/^(?:rework|pkg|#|line|shift|date|tanggal|cell\s*[-_]?\s*id|total|status|pic|cc|note|reason)/i.test(line)) {
+            continue;
+        }
+        // Bersihkan tanda bullet atau titik di depan baris (contoh: ". Short contact ...")
+        let cleanedLine = line.replace(/^[•*_\-–.\s]+/, '').trim();
+        if (cleanedLine.length > 2) {
+            ngRaw = cleanedLine;
+            break;
+        }
+    }
+}
                 let ngName = matchKlasifikasiNG(text, ngRaw);
 
                 let section = 'TW';
