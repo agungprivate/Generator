@@ -1295,6 +1295,7 @@
             let clean = text.replace(/\u00A0/g, ' ');
             let lower = clean.toLowerCase();
 
+            // 1. Cek Downtime / Losskey
             const hasDowntimeMarkers = 
                 lower.includes('downtime bot') || 
                 lower.includes('countermeasure') || 
@@ -1310,25 +1311,31 @@
                 return;
             }
 
-            const isExplicitRework = 
-                lower.includes('cell id') || 
-                lower.includes('cellid') || 
-                /[rework]/i.test(clean) ||
-                /(?:^|\n)\s*rework\b/i.test(clean) ||
-                /(?:^|\n)\s*ng\s*[:=–-]\s*(?!.*\bea\b)/i.test(clean);
-
-            if (isExplicitRework) {
-                if (currentMode !== 'rework') setMode('rework', true);
-                return;
-            }
-
+            // 2. Cek Crack (Prioritaskan sebelum Rework agar tidak salah tangkap)
             if (lower.includes('crack') || lower.includes('pinhole') || (lower.includes('lot id') && lower.includes('pouch lot'))) {
                 if (currentMode !== 'crack') setMode('crack', true);
                 return;
             }
 
-            if ((lower.includes('pouch id') || lower.includes('pouch lot')) && (lower.includes('count') || /\b\d{1,2}[.:]\d{2}\b/.test(clean))) {
+            // 3. Cek Wrinkle (Jika ada Pouch ID / Pouch Lot atau kata wrinkle, paksa masuk Wrinkle)
+            const isExplicitWrinkle = 
+                lower.includes('pouch cup wrinkle') || 
+                lower.includes('wrinkle') || 
+                ((lower.includes('pouch id') || lower.includes('pouch lot')) && (lower.includes('count') || /\b\d{1,2}[.:]\d{2}\b/.test(clean)));
+
+            if (isExplicitWrinkle) {
                 if (currentMode !== 'excel') setMode('excel', true);
+                return;
+            }
+
+            // 4. Cek Rework (Hanya jika benar-benar ada Cell ID atau kata [Rework] yang jelas)
+            const isExplicitRework = 
+                lower.includes('cell id') || 
+                lower.includes('cellid') || 
+                /\[rework\]/i.test(clean);
+
+            if (isExplicitRework) {
+                if (currentMode !== 'rework') setMode('rework', true);
                 return;
             }
         }
