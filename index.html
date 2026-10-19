@@ -1546,7 +1546,7 @@ if (!line) return;
             const isExplicitRework = 
                 lower.includes('cell id') || 
                 lower.includes('cellid') || 
-                /[rework]/i.test(clean) ||
+                 /\[rework\]/i.test(clean) ||
                 lower.includes('rework');
 
             if (isExplicitRework) {
@@ -1570,6 +1570,8 @@ if (!line) return;
                 autoDetectMode(pastedData);
             });
         }
+        // Inisialisasi awal saat web dibuka
+        setMode('downtime', true);
     </script>
 </body>
 </html>
