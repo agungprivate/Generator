@@ -166,7 +166,7 @@
             box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
         }
 
-        /* SUB-TABS (CRACK) */
+        /* SUB-TABS (CRACK & REWORK) */
         .sub-mode-selector {
             display: none;
             gap: 6px;
@@ -369,6 +369,12 @@
             <button class="btn-sub-mode" id="btnCrackExcel" type="button" onclick="setCrackSubMode('excel')">Excel</button>
         </div>
 
+        <!-- SUB-TAB REWORK -->
+        <div class="sub-mode-selector" id="reworkSubTabs">
+            <button class="btn-sub-mode active" id="btnReworkNormal" type="button" onclick="setReworkSubMode('normal')">Rework</button>
+            <button class="btn-sub-mode" id="btnReworkBarcode" type="button" onclick="setReworkSubMode('barcode')">Barcode</button>
+        </div>
+
         <div class="grid">
             <div class="panel">
                 <label for="inputText">Input Data</label>
@@ -392,6 +398,7 @@
     <script>
         let currentMode = 'downtime';
         let crackSubMode = 'image';
+        let reworkSubMode = 'normal';
         let warningTimeout = null;
 
         function setCrackSubMode(subMode) {
@@ -416,6 +423,35 @@
                 let output = (crackSubMode === 'image') 
                     ? formatVisionNaming(input) 
                     : formatCrackExcel(input);
+
+                if (outputEl) outputEl.value = output;
+            } else {
+                if (outputEl) outputEl.value = '';
+            }
+        }
+
+        function setReworkSubMode(subMode) {
+            reworkSubMode = subMode;
+
+            const btnNormal = document.getElementById('btnReworkNormal');
+            const btnBarcode = document.getElementById('btnReworkBarcode');
+
+            if (subMode === 'normal') {
+                btnNormal.classList.add('active');
+                btnBarcode.classList.remove('active');
+            } else {
+                btnBarcode.classList.add('active');
+                btnNormal.classList.remove('active');
+            }
+
+            const inputEl = document.getElementById('inputText');
+            const outputEl = document.getElementById('outputText');
+            
+            if (inputEl && inputEl.value.trim() !== '') {
+                let input = inputEl.value.trim();
+                let output = (reworkSubMode === 'barcode') 
+                    ? formatReworkBarcode(input) 
+                    : formatRework(input);
 
                 if (outputEl) outputEl.value = output;
             } else {
@@ -471,9 +507,14 @@
                 }
             });
 
-            const subTabs = document.getElementById('crackSubTabs');
-            if (subTabs) {
-                subTabs.style.display = (mode === 'crack') ? 'flex' : 'none';
+            const crackSubTabs = document.getElementById('crackSubTabs');
+            if (crackSubTabs) {
+                crackSubTabs.style.display = (mode === 'crack') ? 'flex' : 'none';
+            }
+
+            const reworkSubTabs = document.getElementById('reworkSubTabs');
+            if (reworkSubTabs) {
+                reworkSubTabs.style.display = (mode === 'rework') ? 'flex' : 'none';
             }
 
             const inputEl = document.getElementById('inputText');
@@ -499,7 +540,6 @@
             }
         }
 
-        // Mengubah huruf pertama teks menjadi kapital
         function capitalizeFirst(text) {
             if (!text) return '';
             let trimmed = text.trim();
@@ -520,7 +560,6 @@
             
             let rawVal = match[1] ? match[1].trim() : '';
 
-            // Jika tanda strip '-', jangan cari ke baris bawah
             if (/^[-–—]+$/.test(rawVal)) {
                 return '-';
             }
@@ -648,26 +687,22 @@
             return result;
         }
 
-        // 2. FORMAT WRINKLE (SUPPORT MULTI-COPAS WA TANPA BATAS)
+        // 2. FORMAT WRINKLE
         function formatExcel(fullText) {
             if (!fullText) return '';
 
-            // Bersihkan karakter spasi gaib & samakan format baris baru
             let cleanFull = fullText
                 .replace(/[\u200B-\u200D\uFEFF]/g, '')
                 .replace(/\u00A0/g, ' ')
                 .replace(/\r\n/g, '\n');
 
-            // Hapus header chat WhatsApp (contoh: "[15.42, 14/10/2026] PKG Line 3-2: ")
             cleanFull = cleanFull.replace(/\[\d{1,2}[.:]\d{2},\s*\d{1,2}\/\d{1,2}\/\d{2,4}\]\s*[^:\n]+:\s*/g, '\n');
 
-            // Pecah menjadi blok-blok laporan secara fleksibel
             let blocks = cleanFull
                 .split(/(?=[?Problem Report]?|(?:^|\n)\s*Shift\s*\d+\s*\n+\s*(?:Line|PKG)\s*[:=–-])/i)
                 .map(b => b.trim())
                 .filter(b => b.length > 0 && /(?:Line|PKG|Problem|Pouch)/i.test(b));
 
-            // Fallback jika formatnya langsung mulai dari "Line :" tanpa "Shift" atau "[Problem Report]"
             if (blocks.length <= 1) {
                 let altBlocks = cleanFull
                     .split(/(?=(?:^|\n)\s*(?:Line|PKG)\s*[:=–-]\s*(?:PKG\s*)?\d+-\d+)/i)
@@ -691,7 +726,6 @@
 
                 if (!line) return;
 
-                // Ekstrak Problem (jaga agar tanda [-] atau [+] tidak terpotong oleh cleanText)
                 let matchProb = text.match(/(?:^|\n)[\s*_-]*Problem[\s*_-]*[:=–-]\s*([^\n]+)/i);
                 let problem = matchProb ? matchProb[1].trim() : extractBlock('Problem', text);
 
@@ -963,21 +997,17 @@
             return raw;
         }
 
-        // 4. FORMAT REWORK (SUPPORT MULTI-COPAS WA TANPA BATAS)
+        // 4.A FORMAT REWORK NORMAL
         function formatRework(fullText) {
             if (!fullText) return '';
 
-            // 1. Bersihkan karakter spasi gaib & samakan format baris baru
             let cleanFull = fullText
                 .replace(/[\u200B-\u200D\uFEFF]/g, '')
                 .replace(/\u00A0/g, ' ')
                 .replace(/\r\n/g, '\n');
 
-            // 2. Ubah header chat WhatsApp ("[15.42, 14/10/2026] PKG Line 3-2: ") menjadi penanda batas blok
-            // agar angka jam & nama Line di header WA tidak merusak pembacaan blok di bawahnya
             cleanFull = cleanFull.replace(/\[\d{1,2}[.:]\d{2},\s*\d{1,2}\/\d{1,2}\/\d{2,4}\]\s*[^:\n]+:\s*/g, '\n___WA_SPLIT___\n');
 
-            // 3. Pecah berdasarkan batas pesan WA terlebih dahulu
             let rawChunks = cleanFull
                 .split('___WA_SPLIT___')
                 .map(c => c.trim())
@@ -985,7 +1015,6 @@
 
             if (rawChunks.length === 0) rawChunks = [cleanFull];
 
-            // 4. Di dalam tiap pesan WA, pecah lagi jika terdapat beberapa laporan Rework sekaligus
             let blocks = [];
             rawChunks.forEach(chunk => {
                 let subBlocks = [];
@@ -1024,7 +1053,6 @@
                     }
                 }
 
-                // FALLBACK: Jika label "NG :" tidak ditemukan, cari baris deskripsi defect setelah Shift / Line sebelum Cell ID
                 if (!ngRaw) {
                     let lines = text.split('\n').map(l => l.trim()).filter(Boolean);
                     for (let l of lines) {
@@ -1069,14 +1097,12 @@
                     section = 'TW';
                 }
 
-                // EKSTRAKSI REASON / DETAIL REASON
                 let detailReason = '';
                 let matchReason = text.match(/(?:^|\n)[\s*•_–.-]*Reason\s*[:=–-]?\s*([^\n]+(?:\n(?!\s*[-*•_–.]*(?:PIC|Total|Status|Cell|NG|Note|Cc)\b)[^\n]+)*)/i);
                 if (matchReason) {
                     detailReason = matchReason[1].replace(/\s+/g, ' ').trim();
                 }
 
-                // EKSTRAKSI CELL ID (MEMBERSIHKAN PENOMORAN 1., 2., DLL SERTA SPASI GAIB)
                 let cellIds = [];
                 let matchCellBlock = text.match(/(?:^|\n)[\s*•_–.-]*Cell\s*[-_]?\s*ID\s*[:=–-]?\s*([\s\S]*?)(?=\s*(?:\n[\s*•_–.-]*(?:total|status|pic|cc|note|shift|ng|section|reason|lot\s*id)\b|$))/i);
 
@@ -1093,8 +1119,6 @@
                             let parts = cleaned.split(/[,;\s/&]+|\b(?:dan|and)\b/i);
                             parts.forEach(p => {
                                 let id = p.trim().replace(/^[^\w]+|[^\w]+$/g, '');
-                                
-                                // Pastikan bukan angka murni (jumlah) dan bukan satuan seperti ea/pcs/ok/ng
                                 if (id && !/^\d+$/.test(id) && !/^(?:ea\vert{}pcs\vert{}pc\vert{}total\vert{}ok\vert{}ng\vert{}cell\vert{}id)$/i.test(id)) {
                                     cellIds.push(id);
                                 }
@@ -1108,7 +1132,6 @@
                 let status = isFailed ? 'F' : 'Y';
                 let reason = '';
 
-                // Jika failed dan belum ada detailReason dari label 'Reason', cari dari baris NOTE atau Status
                 if (isFailed && !detailReason) {
                     let matchNote = text.match(/(?:^|\n)[\s*•_–.-]*NOTE\s*[:=–-]?\s*(.*?)(?=\s*(?:\n\s*(?:Cc\b|PIC\b|Status\b|Total\b)|$))/is);
                     if (matchNote && matchNote[1].trim()) {
@@ -1158,12 +1181,193 @@
                 });
             });
 
-            // Tampilkan toast warning jika ada Cell ID yang tidak 10 digit, namun tetap tampilkan hasil konversi
             if (invalidCellIds.length > 0) {
                 showCellWarning(invalidCellIds);
             } else {
                 closeWarningToast();
             }
+
+            return allResults.join('\n');
+        }
+
+        // Helper format tanggal: D-Mmm-YY (e.g. 19-Oct-26, 9-Oct-26)
+        function formatDateBarcode(rawDate) {
+            const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            let d, m, y;
+
+            if (rawDate) {
+                let parts = rawDate.split(/[\/-]/);
+                if (parts.length === 3) {
+                    if (parts[0].length === 4) { // YYYY-MM-DD
+                        y = parseInt(parts[0], 10);
+                        m = parseInt(parts[1], 10) - 1;
+                        d = parseInt(parts[2], 10);
+                    } else if (parts[2].length === 4 || parts[2].length === 2) { // DD/MM/YYYY or DD/MM/YY
+                        d = parseInt(parts[0], 10);
+                        m = parseInt(parts[1], 10) - 1;
+                        y = parseInt(parts[2], 10);
+                        if (y < 100) y += 2000;
+                    }
+                }
+            }
+
+            if (!d || isNaN(d) || isNaN(m) || isNaN(y)) {
+                let today = new Date();
+                d = today.getDate();
+                m = today.getMonth();
+                y = today.getFullYear();
+            }
+
+            let shortYear = String(y).slice(-2);
+            let monthName = months[m] || 'Jan';
+            return `${d}-${monthName}-${shortYear}`;
+        }
+
+        // 4.B FORMAT REWORK BARCODE
+        function formatReworkBarcode(fullText) {
+            if (!fullText) return '';
+
+            let cleanFull = fullText
+                .replace(/[\u200B-\u200D\uFEFF]/g, '')
+                .replace(/\u00A0/g, ' ')
+                .replace(/\r\n/g, '\n');
+
+            cleanFull = cleanFull.replace(/\[\d{1,2}[.:]\d{2},\s*\d{1,2}\/\d{1,2}\/\d{2,4}\]\s*[^:\n]+:\s*/g, '\n___WA_SPLIT___\n');
+
+            let rawChunks = cleanFull
+                .split('___WA_SPLIT___')
+                .map(c => c.trim())
+                .filter(c => c.length > 0);
+
+            if (rawChunks.length === 0) rawChunks = [cleanFull];
+
+            let blocks = [];
+            rawChunks.forEach(chunk => {
+                let subBlocks = [];
+                if (/Rework\s+\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}/i.test(chunk)) {
+                    subBlocks = chunk.split(/(?=(?:^|\n)\s*Rework\s+\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4})/i);
+                } else if (/\[(?:Rework\vert{}Problem Report)\]/i.test(chunk)) {
+                    subBlocks = chunk.split(/(?=\[(?:Rework\vert{}Problem Report)\])/i);
+                } else {
+                    subBlocks = chunk.split(/(?=(?:^|\n)\s*(?:#\s*PKG|PKG\s*\d+-\d+|Line\s*[:=–-]|#(?:[0-9]+-[0-9]+)))/i);
+                }
+
+                subBlocks.forEach(sb => {
+                    let trimmed = sb.trim();
+                    if (trimmed.length > 0) {
+                        blocks.push(trimmed);
+                    }
+                });
+            });
+
+            if (blocks.length === 0) blocks = [cleanFull];
+
+            let allResults = [];
+
+            blocks.forEach(text => {
+                // 1. Line
+                let lineMatch = text.match(/(?:^|\n)\s*(?:#\s*PKG|Line\s*[:=–-]\s*PKG|Line\s*[:=–-]|PKG|#)?\s*([0-9]+-[0-9]+)/i);
+                let line = lineMatch ? `PKG ${lineMatch[1]}` : '';
+                if (!line) return;
+
+                // 2. Date (Format: D-Mmm-YY)
+                let rawDate = extractBlock('Date', text) || extractBlock('Tanggal', text);
+                if (!rawDate) {
+                    let matchDate = text.match(/\b\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}\b/);
+                    if (matchDate) rawDate = matchDate[0];
+                }
+                let date = formatDateBarcode(rawDate);
+
+                // 3. Time
+                let timeRaw = extractBlock('Time', text) || extractBlock('Jam', text) || extractBlock('Waktu', text);
+                let time = '';
+                if (timeRaw) {
+                    let matchTime = timeRaw.match(/\b\d{1,2}[.:]\d{2}\b/);
+                    if (matchTime) time = matchTime[0].replace('.', ':');
+                }
+
+                // 4. Shift (1 -> A, 2 -> B, 3 -> C)
+                let shiftRaw = extractBlock('Shift', text);
+                let shiftNum = '';
+                if (shiftRaw) {
+                    let matchShift = shiftRaw.match(/\d+/);
+                    if (matchShift) shiftNum = matchShift[0];
+                }
+                if (!shiftNum) {
+                    let matchShiftInText = text.match(/\bShift\s*([0-9]+)\b/i);
+                    if (matchShiftInText) shiftNum = matchShiftInText[1];
+                }
+
+                let shift = '';
+                if (shiftNum === '1') shift = 'A';
+                else if (shiftNum === '2') shift = 'B';
+                else if (shiftNum === '3') shift = 'C';
+                else if (shiftRaw) shift = cleanText(shiftRaw);
+
+                // 5. Lot ID
+                let lotId = extractBlock('Lot ID', text) || extractBlock('LotID', text) || extractBlock('Lot', text) || '';
+
+                // 6. Side A/B
+                let side = '';
+                let matchSide = text.match(/Side\s*([A-Za-z0-9\/\-]+)/i);
+                if (matchSide) {
+                    side = matchSide[1].toUpperCase();
+                } else {
+                    if (/\(AB\)/i.test(text) || /\bAB\b/i.test(text)) side = 'AB';
+                    else if (/\bSide A\b/i.test(text)) side = 'A';
+                    else if (/\bSide B\b/i.test(text)) side = 'B';
+                }
+
+                // 7. Qty
+                let qtyRaw = extractBlock('Total', text) || extractBlock('Qty', text) || extractBlock('Count', text);
+                let qty = '';
+                if (qtyRaw) {
+                    let matchNum = qtyRaw.match(/\d+/);
+                    qty = matchNum ? matchNum[0] : qtyRaw;
+                }
+
+                // 8. NG Ketika (Standarisasi Normal Run)
+                let ngKetika = extractBlock('NG Ketika', text) || extractBlock('Ketika', text);
+                if (/normal/i.test(ngKetika)) {
+                    ngKetika = 'Normal Run';
+                }
+
+                // 9. Ink Level
+                let inkLevel = extractBlock('Ink Level', text) || extractBlock('Ink', text);
+
+                // 10. Category
+                let category = extractBlock('Category', text) || extractBlock('Kategori', text);
+
+                // 11. Action
+                let action = extractBlock('Action', text) || extractBlock('Countermeasure', text);
+
+                // 12. Status (Closed)
+                let status = 'Closed';
+
+                // 13. PIC
+                let picRaw = extractBlock('PIC', text);
+                if (picRaw) picRaw = picRaw.replace(/\([^)]*\)/g, '').trim();
+                let pic = formatPicNames(picRaw);
+
+                // Kolum Excel: Date, Time, Shift, Line, Lot ID, Side A/B, Qty, NG Ketika, Ink Level, Category, Action, Status, PIC
+                let row = [
+                    date,
+                    time,
+                    shift,
+                    line,
+                    lotId,
+                    side,
+                    qty,
+                    ngKetika,
+                    inkLevel,
+                    category,
+                    action,
+                    status,
+                    pic
+                ].map(col => (col || '').toString().replace(/[\r\n]+/g, ' ').trim());
+
+                allResults.push(row.join('\t'));
+            });
 
             return allResults.join('\n');
         }
@@ -1214,7 +1418,6 @@
                 }
             }
 
-            // Kapitalisasi otomatis huruf pertama di setiap poin adjustment
             let formattedAdjustment = rawActions.map(act => `- ${capitalizeFirst(act)}`).join('\n');
             
             if (pic) {
@@ -1254,7 +1457,7 @@
             } else if (currentMode === 'crack') {
                 output = (crackSubMode === 'image') ? formatVisionNaming(input) : formatCrackExcel(input);
             } else if (currentMode === 'rework') {
-                output = formatRework(input);
+                output = (reworkSubMode === 'barcode') ? formatReworkBarcode(input) : formatRework(input);
             } else if (currentMode === 'top5') {
                 output = formatTop5(input);
             }
@@ -1295,7 +1498,7 @@
             let clean = text.replace(/\u00A0/g, ' ');
             let lower = clean.toLowerCase();
 
-            // 1. Cek Downtime / Losskey
+            // 1. Downtime / Losskey
             const hasDowntimeMarkers = 
                 lower.includes('downtime bot') || 
                 lower.includes('countermeasure') || 
@@ -1311,13 +1514,13 @@
                 return;
             }
 
-            // 2. Cek Crack (Prioritaskan sebelum Rework agar tidak salah tangkap)
+            // 2. Crack
             if (lower.includes('crack') || lower.includes('pinhole') || (lower.includes('lot id') && lower.includes('pouch lot'))) {
                 if (currentMode !== 'crack') setMode('crack', true);
                 return;
             }
 
-            // 3. Cek Wrinkle (Jika ada Pouch ID / Pouch Lot atau kata wrinkle, paksa masuk Wrinkle)
+            // 3. Wrinkle
             const isExplicitWrinkle = 
                 lower.includes('pouch cup wrinkle') || 
                 lower.includes('wrinkle') || 
@@ -1328,14 +1531,20 @@
                 return;
             }
 
-            // 4. Cek Rework (Hanya jika benar-benar ada Cell ID atau kata [Rework] yang jelas)
+            // 4. Rework
             const isExplicitRework = 
                 lower.includes('cell id') || 
                 lower.includes('cellid') || 
-                /\[rework\]/i.test(clean);
+                /[rework]/i.test(clean) ||
+                lower.includes('rework');
 
             if (isExplicitRework) {
-                if (currentMode !== 'rework') setMode('rework', true);
+                if (currentMode !== 'rework') {
+                    setMode('rework', true);
+                    if (lower.includes('ink level') || lower.includes('ng ketika')) {
+                        setReworkSubMode('barcode');
+                    }
+                }
                 return;
             }
         }
