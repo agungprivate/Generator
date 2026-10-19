@@ -1265,10 +1265,10 @@
             let allResults = [];
 
             blocks.forEach(text => {
-               // 1. Line (Angka saja tanpa PKG)
-            let lineMatch = text.match(/(?:^|\n)\s*(?:#\s*PKG|Line\s*[:=–-]\s*PKG|Line\s*[:=–-]|PKG|#)?\s*([0-9]+-[0-9]+)/i);
-            let line = lineMatch ? lineMatch[1] : '';
-            if (!line) return;
+               // 1. Line (Bungkus formula string agar tidak berubah jadi tanggal di Excel)
+let lineMatch = text.match(/(?:^|\n)\s*(?:#\s*PKG|Line\s*[:=–-]\s*PKG|Line\s*[:=–-]|PKG|#)?\s*([0-9]+-[0-9]+)/i);
+let line = lineMatch ? `="${lineMatch[1]}"` : '';
+if (!line) return;
 
                 // 2. Date (Format: D-Mmm-YY)
                 let rawDate = extractBlock('Date', text) || extractBlock('Tanggal', text);
