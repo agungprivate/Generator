@@ -963,7 +963,7 @@ if (batchHint) {
                 return 'Short Contact';
             }
 
-            if (/lead\s*fi?lm\d*/i.test(ng_lower) || (ng_lower.includes('lead') && ng_lower.includes('film'))) {
+            if (/lead\s*fi?lm/i.test(ng_lower) || ng_lower.includes('leadfilm') || (ng_lower.includes('lead') && ng_lower.includes('film'))) {
                 return `Lead Film (${sign})`;
             }
 
@@ -1064,6 +1064,7 @@ if (batchHint) {
                     }
                 }
 
+              // FALLBACK: Jika label "NG :" tidak ditemukan, cari baris deskripsi defect setelah Shift / Line sebelum Cell ID
                 if (!ngRaw) {
                     let lines = text.split('\n').map(l => l.trim()).filter(Boolean);
                     for (let l of lines) {
@@ -1071,6 +1072,10 @@ if (batchHint) {
                             continue;
                         }
                         let cleanedLine = l.replace(/^[•*_\-–.\s]+/, '').trim();
+                        // Lewati baris header kategori seperti "Tape Vision (-)" jika baris berikutnya berisi detail defect
+                        if (/^tape\s*vision/i.test(cleanedLine)) {
+                            continue;
+                        }
                         if (cleanedLine.length > 2) {
                             ngRaw = cleanedLine;
                             break;
