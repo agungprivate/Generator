@@ -377,7 +377,12 @@
 
         <div class="grid">
             <div class="panel">
-                <label for="inputText">Input Data</label>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+    <label for="inputText" style="margin-bottom: 0;">Input Data</label>
+    <span id="batchHint" style="font-size: 11px; font-weight: 500; color: #0284c7; background: #e0f2fe; padding: 2px 8px; border-radius: 6px; display: none;">
+        ⚡ Support batch (bisa copas banyak pesan WA sekaligus)
+    </span>
+</div>
                 <textarea id="inputText" placeholder="Tempel teks di sini..."></textarea>
             </div>
             <div class="panel">
@@ -511,6 +516,12 @@
             if (crackSubTabs) {
                 crackSubTabs.style.display = (mode === 'crack') ? 'flex' : 'none';
             }
+
+            
+const batchHint = document.getElementById('batchHint');
+if (batchHint) {
+    batchHint.style.display = (mode === 'excel' || mode === 'rework') ? 'inline-block' : 'none';
+}
 
             const reworkSubTabs = document.getElementById('reworkSubTabs');
             if (reworkSubTabs) {
