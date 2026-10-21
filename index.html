@@ -932,8 +932,9 @@ if (batchHint) {
             if (ng_lower.includes('ir contact')) {
                 return 'IR Contact';
             }
-            if (/(ir\s*lc|lc)/i.test(ng_lower) || ng_lower.includes('lead contact') || ng_lower.includes('lead contect')) {
-                return 'Lead Contact';
+            if (/(ir\s*lc|lc)/i.test(ng_lower) || /lea[d]?\s*con?te[ck]t/i.test(ng_lower) || ng_lower.includes('lead contact') || ng_lower.includes('lead contect')) {
+            return 'Lead Contact';
+            }
             }
             if (ng_lower.includes('v sealing') || ng_lower.includes('v-sealing') || ng_lower.includes('vsealing')) {
                 return 'V Sealing';
@@ -994,16 +995,16 @@ if (batchHint) {
             }
 
             if (
-                /\b[bh]\s*dim\b/i.test(ng_lower) ||
-                ng_lower.includes('bdim') ||
-                ng_lower.includes('hdim') ||
-                ng_lower.includes('dimension') ||
-                ng_lower.startsWith('overkill') ||
-                ng_lower === 'overkill' ||
-                raw.toLowerCase().includes('overkill')
-            ) {
-                return `Dimension Overkill (${sign})`;
-            }
+    /\b[bh]\s*dim\b/i.test(ng_lower) ||
+    ng_lower.includes('bdim') ||
+    ng_lower.includes('hdim') ||
+    ng_lower.includes('dimension') ||
+    ng_lower.startsWith('overkill') ||
+    ng_lower === 'overkill' ||
+    cleanedNg.toLowerCase() === 'overkill'
+) {
+    return `Dimension Overkill (${sign})`;
+}
 
             return raw;
         }
