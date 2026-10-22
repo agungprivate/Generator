@@ -1289,8 +1289,9 @@ if (!line) return;
                 // 2. Date (Format: D-Mmm-YY)
                 let rawDate = extractBlock('Date', text) || extractBlock('Tanggal', text);
                 if (!rawDate) {
-                    let matchDate = text.match(/\b\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}\b/);
-                    if (matchDate) rawDate = matchDate[0];
+                    let matchDate = text.match(/(?:Rework\s+)?(\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4})/i) ||
+                                    text.match(/\b\d{1,2}\s+[A-Za-z]+\s+\d{2,4}\b/);
+                    if (matchDate) rawDate = matchDate[1] || matchDate[0];
                 }
                 let date = formatDateBarcode(rawDate);
 
