@@ -166,7 +166,7 @@
             box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
         }
 
-        /* SUB-TABS (CRACK & REWORK) */
+        /* SUB-TABS (CRACK, REWORK, & TOP 5) */
         .sub-mode-selector {
             display: none;
             gap: 6px;
@@ -354,13 +354,19 @@
     <div class="container">
         <h1 class="header-title">Report Generator</h1>
         
-        <!-- POSISI TAB -->
+        <!-- POSISI TAB UTAMA -->
         <div class="mode-selector">
             <button class="btn-mode active" id="btnMode1" type="button" onclick="setMode('downtime')">Losskey</button>
             <button class="btn-mode" id="btnMode5" type="button" onclick="setMode('top5')">Top 5</button>
             <button class="btn-mode" id="btnMode2" type="button" onclick="setMode('excel')">Wrinkle</button>
             <button class="btn-mode" id="btnMode3" type="button" onclick="setMode('crack')">Crack</button>
             <button class="btn-mode" id="btnMode4" type="button" onclick="setMode('rework')">Rework</button>
+        </div>
+
+        <!-- SUB-TAB TOP 5 -->
+        <div class="sub-mode-selector" id="top5SubTabs">
+            <button class="btn-sub-mode active" id="btnTop5Normal" type="button" onclick="setTop5SubMode('normal')">Top 5</button>
+            <button class="btn-sub-mode" id="btnTop5Preweld" type="button" onclick="setTop5SubMode('preweld')">Preweld</button>
         </div>
 
         <!-- SUB-TAB CRACK -->
@@ -378,11 +384,11 @@
         <div class="grid">
             <div class="panel">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-    <label for="inputText" style="margin-bottom: 0;">Input Data</label>
-    <span id="batchHint" style="font-size: 11px; font-weight: 500; color: #0284c7; background: #e0f2fe; padding: 2px 8px; border-radius: 6px; display: none;">
-        ⚡ Support batch (bisa copas banyak pesan WA sekaligus)
-    </span>
-</div>
+                    <label for="inputText" style="margin-bottom: 0;">Input Data</label>
+                    <span id="batchHint" style="font-size: 11px; font-weight: 500; color: #0284c7; background: #e0f2fe; padding: 2px 8px; border-radius: 6px; display: none;">
+                        ⚡ Support batch (bisa copas banyak pesan WA sekaligus)
+                    </span>
+                </div>
                 <textarea id="inputText" placeholder="Tempel teks di sini..."></textarea>
             </div>
             <div class="panel">
@@ -404,6 +410,7 @@
         let currentMode = 'downtime';
         let crackSubMode = 'image';
         let reworkSubMode = 'normal';
+        let top5SubMode = 'normal';
         let warningTimeout = null;
 
         function setCrackSubMode(subMode) {
@@ -412,12 +419,9 @@
             const btnImg = document.getElementById('btnCrackImage');
             const btnXls = document.getElementById('btnCrackExcel');
 
-            if (subMode === 'image') {
-                btnImg.classList.add('active');
-                btnXls.classList.remove('active');
-            } else {
-                btnXls.classList.add('active');
-                btnImg.classList.remove('active');
+            if (btnImg && btnXls) {
+                btnImg.classList.toggle('active', subMode === 'image');
+                btnXls.classList.toggle('active', subMode === 'excel');
             }
 
             const inputEl = document.getElementById('inputText');
@@ -430,8 +434,8 @@
                     : formatCrackExcel(input);
 
                 if (outputEl) outputEl.value = output;
-            } else {
-                if (outputEl) outputEl.value = '';
+            } else if (outputEl) {
+                outputEl.value = '';
             }
         }
 
@@ -441,12 +445,9 @@
             const btnNormal = document.getElementById('btnReworkNormal');
             const btnBarcode = document.getElementById('btnReworkBarcode');
 
-            if (subMode === 'normal') {
-                btnNormal.classList.add('active');
-                btnBarcode.classList.remove('active');
-            } else {
-                btnBarcode.classList.add('active');
-                btnNormal.classList.remove('active');
+            if (btnNormal && btnBarcode) {
+                btnNormal.classList.toggle('active', subMode === 'normal');
+                btnBarcode.classList.toggle('active', subMode === 'barcode');
             }
 
             const inputEl = document.getElementById('inputText');
@@ -459,8 +460,34 @@
                     : formatRework(input);
 
                 if (outputEl) outputEl.value = output;
-            } else {
-                if (outputEl) outputEl.value = '';
+            } else if (outputEl) {
+                outputEl.value = '';
+            }
+        }
+
+        function setTop5SubMode(subMode) {
+            top5SubMode = subMode;
+
+            const btnNormal = document.getElementById('btnTop5Normal');
+            const btnPreweld = document.getElementById('btnTop5Preweld');
+
+            if (btnNormal && btnPreweld) {
+                btnNormal.classList.toggle('active', subMode === 'normal');
+                btnPreweld.classList.toggle('active', subMode === 'preweld');
+            }
+
+            const inputEl = document.getElementById('inputText');
+            const outputEl = document.getElementById('outputText');
+            
+            if (inputEl && inputEl.value.trim() !== '') {
+                let input = inputEl.value.trim();
+                let output = (top5SubMode === 'preweld') 
+                    ? formatTop5Preweld(input) 
+                    : formatTop5(input);
+
+                if (outputEl) outputEl.value = output;
+            } else if (outputEl) {
+                outputEl.value = '';
             }
         }
 
@@ -512,20 +539,26 @@
                 }
             });
 
+            // Tampilkan sub-tab sesuai tab yang aktif
+            const top5SubTabs = document.getElementById('top5SubTabs');
+            if (top5SubTabs) {
+                top5SubTabs.style.display = (mode === 'top5') ? 'flex' : 'none';
+            }
+
             const crackSubTabs = document.getElementById('crackSubTabs');
             if (crackSubTabs) {
                 crackSubTabs.style.display = (mode === 'crack') ? 'flex' : 'none';
             }
 
-            
-const batchHint = document.getElementById('batchHint');
-if (batchHint) {
-    batchHint.style.display = (mode === 'excel' || mode === 'rework') ? 'inline-block' : 'none';
-}
-
             const reworkSubTabs = document.getElementById('reworkSubTabs');
             if (reworkSubTabs) {
                 reworkSubTabs.style.display = (mode === 'rework') ? 'flex' : 'none';
+            }
+
+            // Tampilkan info batch hint
+            const batchHint = document.getElementById('batchHint');
+            if (batchHint) {
+                batchHint.style.display = (mode === 'excel' || mode === 'rework') ? 'inline-block' : 'none';
             }
 
             const inputEl = document.getElementById('inputText');
@@ -933,7 +966,7 @@ if (batchHint) {
                 return 'IR Contact';
             }
             if (/(ir\s*lc|lc)/i.test(ng_lower) || /lea[d]?\s*con?te[ck]t/i.test(ng_lower) || ng_lower.includes('lead contact') || ng_lower.includes('lead contect')) {
-            return 'Lead Contact';
+                return 'Lead Contact';
             }
             if (ng_lower.includes('v sealing') || ng_lower.includes('v-sealing') || ng_lower.includes('vsealing')) {
                 return 'V Sealing';
@@ -994,16 +1027,16 @@ if (batchHint) {
             }
 
             if (
-    /\b[bh]\s*dim\b/i.test(ng_lower) ||
-    ng_lower.includes('bdim') ||
-    ng_lower.includes('hdim') ||
-    ng_lower.includes('dimension') ||
-    ng_lower.startsWith('overkill') ||
-    ng_lower === 'overkill' ||
-    cleanedNg.toLowerCase() === 'overkill'
-) {
-    return `Dimension Overkill (${sign})`;
-}
+                /\b[bh]\s*dim\b/i.test(ng_lower) ||
+                ng_lower.includes('bdim') ||
+                ng_lower.includes('hdim') ||
+                ng_lower.includes('dimension') ||
+                ng_lower.startsWith('overkill') ||
+                ng_lower === 'overkill' ||
+                cleanedNg.toLowerCase() === 'overkill'
+            ) {
+                return `Dimension Overkill (${sign})`;
+            }
 
             return raw;
         }
@@ -1064,7 +1097,7 @@ if (batchHint) {
                     }
                 }
 
-              // FALLBACK: Jika label "NG :" tidak ditemukan, cari baris deskripsi defect setelah Shift / Line sebelum Cell ID
+                // FALLBACK: Jika label "NG :" tidak ditemukan, cari baris deskripsi defect setelah Shift / Line sebelum Cell ID
                 if (!ngRaw) {
                     let lines = text.split('\n').map(l => l.trim()).filter(Boolean);
                     for (let l of lines) {
@@ -1072,7 +1105,6 @@ if (batchHint) {
                             continue;
                         }
                         let cleanedLine = l.replace(/^[•*_\-–.\s]+/, '').trim();
-                        // Lewati baris header kategori seperti "Tape Vision (-)" jika baris berikutnya berisi detail defect
                         if (/^tape\s*vision/i.test(cleanedLine)) {
                             continue;
                         }
@@ -1206,7 +1238,7 @@ if (batchHint) {
             return allResults.join('\n');
         }
 
-        // Helper format tanggal: D-Mmm-YY (e.g. 19-Oct-26, 9-Oct-26)
+        // Helper format tanggal: D-Mmm-YY (misal: 22-Oct-26, 9-Oct-26)
         function formatDateBarcode(rawDate) {
             const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
             let d, m, y;
@@ -1281,12 +1313,12 @@ if (batchHint) {
             let allResults = [];
 
             blocks.forEach(text => {
-               // 1. Line (Bungkus formula string agar tidak berubah jadi tanggal di Excel)
-let lineMatch = text.match(/(?:^|\n)\s*(?:#\s*PKG|Line\s*[:=–-]\s*PKG|Line\s*[:=–-]|PKG|#)?\s*([0-9]+-[0-9]+)/i);
-let line = lineMatch ? `="${lineMatch[1]}"` : '';
-if (!line) return;
+                // 1. Line
+                let lineMatch = text.match(/(?:^|\n)\s*(?:#\s*PKG|Line\s*[:=–-]\s*PKG|Line\s*[:=–-]|PKG|#)?\s*([0-9]+-[0-9]+)/i);
+                let line = lineMatch ? `="${lineMatch[1]}"` : '';
+                if (!line) return;
 
-                // 2. Date (Format: D-Mmm-YY)
+                // 2. Date
                 let rawDate = extractBlock('Date', text) || extractBlock('Tanggal', text);
                 if (!rawDate) {
                     let matchDate = text.match(/(?:Rework\s+)?(\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4})/i) ||
@@ -1358,7 +1390,7 @@ if (!line) return;
                 // 11. Action
                 let action = extractBlock('Action', text) || extractBlock('Countermeasure', text);
 
-                // 12. Status (Closed)
+                // 12. Status
                 let status = 'Closed';
 
                 // 13. PIC
@@ -1366,7 +1398,7 @@ if (!line) return;
                 if (picRaw) picRaw = picRaw.replace(/\([^)]*\)/g, '').trim();
                 let pic = formatPicNames(picRaw);
 
-                // Kolum Excel: Date, Time, Shift, Line, Lot ID, Side A/B, Qty, NG Ketika, Ink Level, Category, Action, Status, PIC
+                // Kolom Excel: Date, Time, Shift, Line, Lot ID, Side A/B, Qty, NG Ketika, Ink Level, Category, Action, Status, PIC
                 let row = [
                     date,
                     time,
@@ -1389,9 +1421,9 @@ if (!line) return;
             return allResults.join('\n');
         }
         
-        // 5. FORMAT TOP 5
+        // 5.A FORMAT TOP 5 NORMAL
         function formatTop5(text) {
-            let lineMatch = text.match(/(?:Line\s*ID|Line|PKG)\s*[:=–-]?\s*([0-9]+-[0-9]+)/i);
+            let lineMatch = text.match(/(?:Line\s*ID|Line|PKG)\s*[:=–-]?\s*(?:PKG\s*)?([0-9]+-[0-9]+)/i);
             let line = lineMatch ? lineMatch[1] : '';
 
             let rootCause = extractBlock('Cause', text) || extractBlock('Root Cause', text);
@@ -1446,6 +1478,122 @@ if (!line) return;
             return `="${line}"\t${rootCause}\t${safeAdjustment}`;
         }
 
+        // 5.B FORMAT TOP 5 PREWELD
+        function formatTop5Preweld(text) {
+            if (!text) return '';
+
+            // 1. Line
+            let lineMatch = text.match(/(?:Line\s*ID|Line|PKG)\s*[:=–-]?\s*(?:PKG\s*)?([0-9]+-[0-9]+)/i);
+            let line = lineMatch ? `="${lineMatch[1]}"` : '';
+
+            // 2. Polarity dari Location: (-) -> Anode, (+) -> Cathode
+            let locationRaw = extractBlock('Location', text);
+            let polarity = '';
+            if (/[-–—]/.test(locationRaw) || /anode/i.test(locationRaw)) {
+                polarity = 'Anode';
+            } else if (/\+/.test(locationRaw) || /cathode/i.test(locationRaw)) {
+                polarity = 'Cathode';
+            }
+
+            // 3. Issue Date & Date (YYYY-MM-DD)
+            let rawDate = extractBlock('Date', text) || extractBlock('Tanggal', text);
+            if (!rawDate) {
+                let matchDate = text.match(/\b\d{1,2}\s+[A-Za-z]+\s+\d{4}\b/) || text.match(/\b\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}\b/);
+                if (matchDate) rawDate = matchDate[0];
+            }
+            let formattedDate = '';
+            if (rawDate) {
+                let d = new Date(rawDate);
+                if (!isNaN(d.getTime())) {
+                    let y = d.getFullYear();
+                    let m = String(d.getMonth() + 1).padStart(2, '0');
+                    let dt = String(d.getDate()).padStart(2, '0');
+                    formattedDate = `${y}-${m}-${dt}`;
+                }
+            }
+            if (!formattedDate) {
+                let today = new Date();
+                let y = today.getFullYear();
+                let m = String(today.getMonth() + 1).padStart(2, '0');
+                let dt = String(today.getDate()).padStart(2, '0');
+                formattedDate = `${y}-${m}-${dt}`;
+            }
+
+            // 4. Rootcause
+            let rootCause = extractBlock('Cause', text) || extractBlock('Root Cause', text);
+            if (!rootCause || rootCause.trim() === '-' || /^action\b/i.test(rootCause.trim())) {
+                rootCause = '-';
+            } else {
+                rootCause = capitalizeFirst(rootCause);
+            }
+
+            // 5. Qty Defect
+            let qtyRaw = extractBlock('Qty Defect Cell', text) || extractBlock('Qty Defect', text) || extractBlock('Total', text) || extractBlock('Qty', text);
+            let qty = '';
+            if (qtyRaw) {
+                let matchNum = qtyRaw.match(/\d+/);
+                qty = matchNum ? matchNum[0] : qtyRaw.trim();
+            }
+
+            // 6. Temp Action
+            let rawActions = [];
+            let lines = text.split('\n');
+            let isAction = false;
+
+            for (let l of lines) {
+                let trimmed = l.trim();
+                
+                if (/^[\s*_-]*(Countermeasure|Action|Adjustment)[\s*_-]*[:=]?/i.test(trimmed)) {
+                    isAction = true;
+                    let afterHeader = trimmed.replace(/^[\s*_-]*(Countermeasure|Action|Adjustment)[\s*_-]*[:=]?/i, '').trim();
+                    if (afterHeader.length > 0) {
+                        let clean = afterHeader.replace(/^(\d+[.)]|[-*•])\s*/, '').replace(/[*_]/g, '').trim();
+                        if (clean) rawActions.push(clean);
+                    }
+                    continue;
+                }
+
+                if (isAction) {
+                    if (/^[\s*_-]*(Part Replacement|PIC|Qty Defect|Start Time|End Time|Duration|Stop Status|Status|Note|Risk Range)[\s*_-]*[:=]/i.test(trimmed)) {
+                        isAction = false;
+                        continue;
+                    }
+
+                    if (trimmed.length > 0) {
+                        let cleanAction = trimmed.replace(/^(\d+[.)]|[-*•])\s*/, '').replace(/[*_]/g, '').trim();
+                        if (cleanAction) rawActions.push(cleanAction);
+                    }
+                }
+            }
+
+            let formattedAdjustment = rawActions.map(act => `- ${capitalizeFirst(act)}`).join('\n');
+            let safeTempAction = formattedAdjustment ? `"${formattedAdjustment.replace(/"/g, '""')}"` : '';
+
+            // 7. PIC
+            let picRaw = extractBlock('PIC', text);
+            let pic = formatPicNames(picRaw);
+
+            // Kolom Tabel Preweld:
+            // Nomor, Issue, Polarity, Part Issue, Line, Issue Date, Rootcause, Detection, Counting Part, QTY Defect, Temp Action, PIC, Date
+            let row = [
+                '',                     // Nomor
+                '',                     // Issue
+                polarity,               // Polarity
+                '',                     // Part Issue
+                line,                   // Line
+                formattedDate,          // Issue Date
+                rootCause,              // Rootcause
+                '',                     // Detection
+                '',                     // Counting Part
+                qty,                    // QTY Defect
+                safeTempAction,         // Temp Action
+                pic,                    // PIC
+                formattedDate           // Date
+            ];
+
+            return row.join('\t');
+        }
+
         function showToast() {
             const toast = document.getElementById('toast');
             if (toast) {
@@ -1476,7 +1624,7 @@ if (!line) return;
             } else if (currentMode === 'rework') {
                 output = (reworkSubMode === 'barcode') ? formatReworkBarcode(input) : formatRework(input);
             } else if (currentMode === 'top5') {
-                output = formatTop5(input);
+                output = (top5SubMode === 'preweld') ? formatTop5Preweld(input) : formatTop5(input);
             }
 
             if (outputEl) {
@@ -1515,7 +1663,7 @@ if (!line) return;
             let clean = text.replace(/\u00A0/g, ' ');
             let lower = clean.toLowerCase();
 
-            // 1. Downtime / Losskey
+            // 1. Downtime / Losskey & Top 5 Preweld
             const hasDowntimeMarkers = 
                 lower.includes('downtime bot') || 
                 lower.includes('countermeasure') || 
@@ -1525,8 +1673,13 @@ if (!line) return;
                 (lower.includes('start time') && lower.includes('duration'));
 
             if (hasDowntimeMarkers) {
-                if (currentMode !== 'top5' && currentMode !== 'downtime') {
-                    setMode('downtime', true);
+                if (/preweld/i.test(clean)) {
+                    if (currentMode !== 'top5') setMode('top5', true);
+                    setTop5SubMode('preweld');
+                } else {
+                    if (currentMode !== 'top5' && currentMode !== 'downtime') {
+                        setMode('downtime', true);
+                    }
                 }
                 return;
             }
@@ -1552,7 +1705,7 @@ if (!line) return;
             const isExplicitRework = 
                 lower.includes('cell id') || 
                 lower.includes('cellid') || 
-                 /\[rework\]/i.test(clean) ||
+                /\[rework\]/i.test(clean) ||
                 lower.includes('rework');
 
             if (isExplicitRework) {
@@ -1576,7 +1729,8 @@ if (!line) return;
                 autoDetectMode(pastedData);
             });
         }
-        // Inisialisasi awal saat web dibuka
+
+        // Inisialisasi awal saat web pertama kali dimuat
         setMode('downtime', true);
     </script>
 </body>
