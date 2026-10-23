@@ -749,6 +749,15 @@
 
             if (blocks.length <= 1) {
                 let altBlocks = cleanFull
+                // Ekstraksi Date untuk Wrinkle
+                let rawDate = extractBlock('Date', text) || extractBlock('Tanggal', text);
+                if (!rawDate) {
+                    let matchDate = text.match(/\b\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}\b/) ||
+                                    text.match(/\b\d{1,2}\s+[A-Za-z]+\s+\d{2,4}\b/);
+                    if (matchDate) rawDate = matchDate[0];
+                }
+                let date = formatDateIso(rawDate);
+                    
                     .split(/(?=(?:^|\n)\s*(?:Line|PKG)\s*[:=–-]\s*(?:PKG\s*)?\d+-\d+)/i)
                     .map(b => b.trim())
                     .filter(b => b.length > 0 && /(?:Problem|Pouch|Count)/i.test(b));
@@ -811,7 +820,7 @@
                 for (let i = 0; i < maxLen; i++) {
                     let t = times[i] !== undefined ? times[i] : (times[0] || '');
                     let c = counts[i] !== undefined ? counts[i] : (counts[0] || '');
-                    allRows.push(`${line}\t${problem}\t${t}\t${pouchId}\t${c}\t${pic}`);
+                    allRows.push(`${date}\t${line}\t${problem}\t${t}\t${pouchId}\t${c}\t${pic}`);
                 }
             });
 
@@ -1086,6 +1095,14 @@
             blocks.forEach(text => {
                 let lineMatch = text.match(/(?:^|\n)\s*(?:#\s*PKG|Line\s*[:=–-]\s*PKG|Line\s*[:=–-]|PKG|#)?\s*([0-9]+-[0-9]+)/i);
                 let line = lineMatch ? `PKG ${lineMatch[1]}` : '';
+                // Ekstraksi Date (berdasarkan report)
+                let rawDate = extractBlock('Date', text) || extractBlock('Tanggal', text);
+                if (!rawDate) {
+                    let matchDate = text.match(/(?:Rework\s+)?(\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4})/i) ||
+                                    text.match(/\b\d{1,2}\s+[A-Za-z]+\s+\d{2,4}\b/);
+                    if (matchDate) rawDate = matchDate[1] || matchDate[0];
+                }
+                let date = formatDateIso(rawDate);
 
                 if (!line) return;
 
@@ -1212,7 +1229,9 @@
                     let pkgId = (section === 'EL') ? cellId : '';
                     let stkId = (section === 'TW' || section === 'CA') ? cellId : '';
 
+                   // Susunan Kolom Rework: Date, Line, Section, NG Name, Lot ID, PKG ID, STK ID Lama, Status rework, Reason, Detail Reason, PIC
                     let row = [
+                        date,           // Kolom paling kiri (YYYY-MM-DD)
                         line,
                         section,
                         ngName,
@@ -1270,6 +1289,40 @@
             let monthName = months[m] || 'Jan';
             return `${d}-${monthName}-${shortYear}`;
         }
+
+        function formatDateIso(rawDate) {
+    let d, m, y;
+    if (rawDate) {
+        let cleanDate = rawDate.trim();
+        // Cek format tanggal teks seperti: 23 October 2026 / 23 Oct 2026
+        let parsed = new Date(cleanDate);
+        if (!isNaN(parsed.getTime())) {
+            let year = parsed.getFullYear();
+            let month = String(parsed.getMonth() + 1).padStart(2, '0');
+            let day = String(parsed.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+        // Cek format DD/MM/YYYY atau YYYY/MM/DD
+        let parts = cleanDate.split(/[\/-]/);
+        if (parts.length === 3) {
+            if (parts[0].length === 4) { // YYYY-MM-DD
+                return `${parts[0]}-${String(parts[1]).padStart(2, '0')}-${String(parts[2]).padStart(2, '0')}`;
+            } else if (parts[2].length === 4 || parts[2].length === 2) { // DD-MM-YYYY
+                y = parseInt(parts[2], 10);
+                if (y < 100) y += 2000;
+                m = String(parts[1]).padStart(2, '0');
+                d = String(parts[0]).padStart(2, '0');
+                return `${y}-${m}-${d}`;
+            }
+        }
+    }
+    // Fallback hari ini jika tanggal di teks tidak ada
+    let today = new Date();
+    let year = today.getFullYear();
+    let month = String(today.getMonth() + 1).padStart(2, '0');
+    let day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
 
         // 4.B FORMAT REWORK BARCODE
         function formatReworkBarcode(fullText) {
