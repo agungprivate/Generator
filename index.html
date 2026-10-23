@@ -1681,9 +1681,10 @@
             }
         }
 
-        function copyOutput() {
+     function copyOutput() {
             const outputEl = document.getElementById('outputText');
-            let textToCopy = outputEl ? outputEl.value.trim() : '';
+            // Menghapus baris kosong di awal/akhir tanpa memotong tab atau karakter awal
+            let textToCopy = outputEl ? outputEl.value.replace(/^[\r\n]+|[\r\n]+$/g, '') : '';
 
             if (!textToCopy) return;
 
