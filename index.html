@@ -1528,13 +1528,15 @@
             return `="${line}"\t${rootCause}\t${safeAdjustment}`;
         }
 
-        // 5.B FORMAT TOP 5 PREWELD
+       // 5.B FORMAT TOP 5 PREWELD
         function formatTop5Preweld(text) {
             if (!text) return '';
 
+            // 1. Line
             let lineMatch = text.match(/(?:Line\s*ID|Line|PKG)\s*[:=–-]?\s*(?:PKG\s*)?([0-9]+-[0-9]+)/i);
             let line = lineMatch ? `="${lineMatch[1]}"` : '';
 
+            // 2. Polarity dari Location: (-) -> Anode, (+) -> Cathode
             let locationRaw = extractBlock('Location', text);
             let polarity = '';
             if (/[-–—]/.test(locationRaw) || /anode/i.test(locationRaw)) {
@@ -1543,6 +1545,7 @@
                 polarity = 'Cathode';
             }
 
+            // 3. Issue Date & Date (YYYY-MM-DD)
             let rawDate = extractBlock('Date', text) || extractBlock('Tanggal', text);
             if (!rawDate) {
                 let matchDate = text.match(/\b\d{1,2}\s+[A-Za-z]+\s+\d{4}\b/) || text.match(/\b\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}\b/);
@@ -1550,6 +1553,7 @@
             }
             let formattedDate = formatDateIso(rawDate);
 
+            // 4. Rootcause
             let rootCause = extractBlock('Cause', text) || extractBlock('Root Cause', text);
             if (!rootCause || rootCause.trim() === '-' || /^action\b/i.test(rootCause.trim())) {
                 rootCause = '-';
@@ -1557,13 +1561,18 @@
                 rootCause = capitalizeFirst(rootCause);
             }
 
-            let qtyRaw = extractBlock('Qty Defect Cell', text) || extractBlock('Qty Defect', text) || extractBlock('Total', text) || extractBlock('Qty', text);
+            // 5. Qty Defect
+            let qtyRaw = extractBlock('Qty Defect Cell', text) || 
+                         extractBlock('Qty Defect', text) || 
+                         extractBlock('Total', text) || 
+                         extractBlock('Qty', text);
             let qty = '';
             if (qtyRaw) {
                 let matchNum = qtyRaw.match(/\d+/);
                 qty = matchNum ? matchNum[0] : qtyRaw.trim();
             }
 
+            // 6. Action / Temp Action
             let rawActions = [];
             let lines = text.split('\n');
             let isAction = false;
@@ -1597,24 +1606,38 @@
             let formattedAdjustment = rawActions.map(act => `- ${capitalizeFirst(act)}`).join('\n');
             let safeTempAction = formattedAdjustment ? `"${formattedAdjustment.replace(/"/g, '""')}"` : '';
 
+            // 7. PIC
             let picRaw = extractBlock('PIC', text);
             let pic = formatPicNames(picRaw);
 
-            // Kolom Tabel Preweld
+            // Susunan Kolom (Paste mulai dari sel ISSUE):
+            // 1. Issue                  -> '""' (sel kosong eksplisit untuk Excel)
+            // 2. Polarity               -> polarity (Anode / Cathode)
+            // 3. Part Issue             -> '' (kosong)
+            // 4. Line                   -> line
+            // 5. Issue Date             -> formattedDate
+            // 6. Rootcause              -> rootCause
+            // 7. Detection              -> '' (kosong)
+            // 8. [Kolom Hide]           -> '' (kosong)
+            // 9. Counting Part          -> '' (kosong)
+            // 10. QTY Defect            -> qty
+            // 11. Temp Action           -> safeTempAction
+            // 12. PIC                   -> pic
+            // 13. Date                  -> formattedDate
             let row = [
-                '',                     // Nomor
-                '',                     // Issue
-                polarity,               // Polarity
-                '',                     // Part Issue
-                line,                   // Line
-                formattedDate,          // Issue Date
-                rootCause,              // Rootcause
-                '',                     // Detection
-                '',                     // Counting Part
-                qty,                    // QTY Defect
-                safeTempAction,         // Temp Action
-                pic,                    // PIC
-                formattedDate           // Date
+                '""',
+                polarity,
+                '',
+                line,
+                formattedDate,
+                rootCause,
+                '',
+                '',
+                '',
+                qty,
+                safeTempAction,
+                pic,
+                formattedDate
             ];
 
             return row.join('\t');
