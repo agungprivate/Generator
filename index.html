@@ -133,7 +133,7 @@
             gap: 10px;
         }
 
-        /* TABS */
+        /* TABS UTAMA */
         .mode-selector {
             display: flex;
             gap: 8px;
@@ -166,7 +166,7 @@
             box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
         }
 
-        /* SUB-TABS (CRACK, REWORK, & TOP 5) */
+        /* SUB-TABS */
         .sub-mode-selector {
             display: none;
             gap: 6px;
@@ -413,6 +413,71 @@
         let top5SubMode = 'normal';
         let warningTimeout = null;
 
+        // Helper format tanggal: YYYY-MM-DD
+        function formatDateIso(rawDate) {
+            let d, m, y;
+            if (rawDate) {
+                let cleanDate = rawDate.trim();
+                let parsed = new Date(cleanDate);
+                if (!isNaN(parsed.getTime())) {
+                    let year = parsed.getFullYear();
+                    let month = String(parsed.getMonth() + 1).padStart(2, '0');
+                    let day = String(parsed.getDate()).padStart(2, '0');
+                    return `${year}-${month}-${day}`;
+                }
+                let parts = cleanDate.split(/[\/-]/);
+                if (parts.length === 3) {
+                    if (parts[0].length === 4) {
+                        return `${parts[0]}-${String(parts[1]).padStart(2, '0')}-${String(parts[2]).padStart(2, '0')}`;
+                    } else if (parts[2].length === 4 || parts[2].length === 2) {
+                        y = parseInt(parts[2], 10);
+                        if (y < 100) y += 2000;
+                        m = String(parts[1]).padStart(2, '0');
+                        d = String(parts[0]).padStart(2, '0');
+                        return `${y}-${m}-${d}`;
+                    }
+                }
+            }
+            let today = new Date();
+            let year = today.getFullYear();
+            let month = String(today.getMonth() + 1).padStart(2, '0');
+            let day = String(today.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        // Helper format tanggal Barcode: D-Mmm-YY (misal: 22-Oct-26)
+        function formatDateBarcode(rawDate) {
+            const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            let d, m, y;
+
+            if (rawDate) {
+                let parts = rawDate.split(/[\/-]/);
+                if (parts.length === 3) {
+                    if (parts[0].length === 4) {
+                        y = parseInt(parts[0], 10);
+                        m = parseInt(parts[1], 10) - 1;
+                        d = parseInt(parts[2], 10);
+                    } else if (parts[2].length === 4 || parts[2].length === 2) {
+                        d = parseInt(parts[0], 10);
+                        m = parseInt(parts[1], 10) - 1;
+                        y = parseInt(parts[2], 10);
+                        if (y < 100) y += 2000;
+                    }
+                }
+            }
+
+            if (!d || isNaN(d) || isNaN(m) || isNaN(y)) {
+                let today = new Date();
+                d = today.getDate();
+                m = today.getMonth();
+                y = today.getFullYear();
+            }
+
+            let shortYear = String(y).slice(-2);
+            let monthName = months[m] || 'Jan';
+            return `${d}-${monthName}-${shortYear}`;
+        }
+
         function setCrackSubMode(subMode) {
             crackSubMode = subMode;
 
@@ -539,7 +604,6 @@
                 }
             });
 
-            // Tampilkan sub-tab sesuai tab yang aktif
             const top5SubTabs = document.getElementById('top5SubTabs');
             if (top5SubTabs) {
                 top5SubTabs.style.display = (mode === 'top5') ? 'flex' : 'none';
@@ -555,7 +619,6 @@
                 reworkSubTabs.style.display = (mode === 'rework') ? 'flex' : 'none';
             }
 
-            // Tampilkan info batch hint
             const batchHint = document.getElementById('batchHint');
             if (batchHint) {
                 batchHint.style.display = (mode === 'excel' || mode === 'rework') ? 'inline-block' : 'none';
@@ -731,7 +794,7 @@
             return result;
         }
 
-        // 2. FORMAT WRINKLE
+        // 2. FORMAT WRINKLE (DENGAN TANGGAL DI KOLOM PALING KIRI)
         function formatExcel(fullText) {
             if (!fullText) return '';
 
@@ -749,15 +812,6 @@
 
             if (blocks.length <= 1) {
                 let altBlocks = cleanFull
-                // Ekstraksi Date untuk Wrinkle
-                let rawDate = extractBlock('Date', text) || extractBlock('Tanggal', text);
-                if (!rawDate) {
-                    let matchDate = text.match(/\b\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}\b/) ||
-                                    text.match(/\b\d{1,2}\s+[A-Za-z]+\s+\d{2,4}\b/);
-                    if (matchDate) rawDate = matchDate[0];
-                }
-                let date = formatDateIso(rawDate);
-                    
                     .split(/(?=(?:^|\n)\s*(?:Line|PKG)\s*[:=–-]\s*(?:PKG\s*)?\d+-\d+)/i)
                     .map(b => b.trim())
                     .filter(b => b.length > 0 && /(?:Problem|Pouch|Count)/i.test(b));
@@ -778,6 +832,15 @@
                 }
 
                 if (!line) return;
+
+                // Ekstraksi Date untuk Wrinkle
+                let rawDate = extractBlock('Date', text) || extractBlock('Tanggal', text);
+                if (!rawDate) {
+                    let matchDate = text.match(/\b\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}\b/) ||
+                                    text.match(/\b\d{1,2}\s+[A-Za-z]+\s+\d{2,4}\b/);
+                    if (matchDate) rawDate = matchDate[0];
+                }
+                let date = formatDateIso(rawDate);
 
                 let matchProb = text.match(/(?:^|\n)[\s*_-]*Problem[\s*_-]*[:=–-]\s*([^\n]+)/i);
                 let problem = matchProb ? matchProb[1].trim() : extractBlock('Problem', text);
@@ -1050,7 +1113,7 @@
             return raw;
         }
 
-        // 4.A FORMAT REWORK NORMAL
+        // 4.A FORMAT REWORK NORMAL (DENGAN TANGGAL DI KOLOM PALING KIRI)
         function formatRework(fullText) {
             if (!fullText) return '';
 
@@ -1095,7 +1158,10 @@
             blocks.forEach(text => {
                 let lineMatch = text.match(/(?:^|\n)\s*(?:#\s*PKG|Line\s*[:=–-]\s*PKG|Line\s*[:=–-]|PKG|#)?\s*([0-9]+-[0-9]+)/i);
                 let line = lineMatch ? `PKG ${lineMatch[1]}` : '';
-                // Ekstraksi Date (berdasarkan report)
+
+                if (!line) return;
+
+                // Ekstraksi Date untuk Rework
                 let rawDate = extractBlock('Date', text) || extractBlock('Tanggal', text);
                 if (!rawDate) {
                     let matchDate = text.match(/(?:Rework\s+)?(\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4})/i) ||
@@ -1103,8 +1169,6 @@
                     if (matchDate) rawDate = matchDate[1] || matchDate[0];
                 }
                 let date = formatDateIso(rawDate);
-
-                if (!line) return;
 
                 let ngRaw = extractBlock('NG', text);
                 if (!ngRaw) {
@@ -1114,7 +1178,7 @@
                     }
                 }
 
-                // FALLBACK: Jika label "NG :" tidak ditemukan, cari baris deskripsi defect setelah Shift / Line sebelum Cell ID
+                // Fallback pencarian defect
                 if (!ngRaw) {
                     let lines = text.split('\n').map(l => l.trim()).filter(Boolean);
                     for (let l of lines) {
@@ -1229,7 +1293,7 @@
                     let pkgId = (section === 'EL') ? cellId : '';
                     let stkId = (section === 'TW' || section === 'CA') ? cellId : '';
 
-                   // Susunan Kolom Rework: Date, Line, Section, NG Name, Lot ID, PKG ID, STK ID Lama, Status rework, Reason, Detail Reason, PIC
+                    // Susunan Kolom Rework: Date, Line, Section, NG Name, Lot ID, PKG ID, STK ID Lama, Status rework, Reason, Detail Reason, PIC
                     let row = [
                         date,           // Kolom paling kiri (YYYY-MM-DD)
                         line,
@@ -1256,73 +1320,6 @@
 
             return allResults.join('\n');
         }
-
-        // Helper format tanggal: D-Mmm-YY (misal: 22-Oct-26, 9-Oct-26)
-        function formatDateBarcode(rawDate) {
-            const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-            let d, m, y;
-
-            if (rawDate) {
-                let parts = rawDate.split(/[\/-]/);
-                if (parts.length === 3) {
-                    if (parts[0].length === 4) { // YYYY-MM-DD
-                        y = parseInt(parts[0], 10);
-                        m = parseInt(parts[1], 10) - 1;
-                        d = parseInt(parts[2], 10);
-                    } else if (parts[2].length === 4 || parts[2].length === 2) { // DD/MM/YYYY or DD/MM/YY
-                        d = parseInt(parts[0], 10);
-                        m = parseInt(parts[1], 10) - 1;
-                        y = parseInt(parts[2], 10);
-                        if (y < 100) y += 2000;
-                    }
-                }
-            }
-
-            if (!d || isNaN(d) || isNaN(m) || isNaN(y)) {
-                let today = new Date();
-                d = today.getDate();
-                m = today.getMonth();
-                y = today.getFullYear();
-            }
-
-            let shortYear = String(y).slice(-2);
-            let monthName = months[m] || 'Jan';
-            return `${d}-${monthName}-${shortYear}`;
-        }
-
-        function formatDateIso(rawDate) {
-    let d, m, y;
-    if (rawDate) {
-        let cleanDate = rawDate.trim();
-        // Cek format tanggal teks seperti: 23 October 2026 / 23 Oct 2026
-        let parsed = new Date(cleanDate);
-        if (!isNaN(parsed.getTime())) {
-            let year = parsed.getFullYear();
-            let month = String(parsed.getMonth() + 1).padStart(2, '0');
-            let day = String(parsed.getDate()).padStart(2, '0');
-            return `${year}-${month}-${day}`;
-        }
-        // Cek format DD/MM/YYYY atau YYYY/MM/DD
-        let parts = cleanDate.split(/[\/-]/);
-        if (parts.length === 3) {
-            if (parts[0].length === 4) { // YYYY-MM-DD
-                return `${parts[0]}-${String(parts[1]).padStart(2, '0')}-${String(parts[2]).padStart(2, '0')}`;
-            } else if (parts[2].length === 4 || parts[2].length === 2) { // DD-MM-YYYY
-                y = parseInt(parts[2], 10);
-                if (y < 100) y += 2000;
-                m = String(parts[1]).padStart(2, '0');
-                d = String(parts[0]).padStart(2, '0');
-                return `${y}-${m}-${d}`;
-            }
-        }
-    }
-    // Fallback hari ini jika tanggal di teks tidak ada
-    let today = new Date();
-    let year = today.getFullYear();
-    let month = String(today.getMonth() + 1).padStart(2, '0');
-    let day = String(today.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-}
 
         // 4.B FORMAT REWORK BARCODE
         function formatReworkBarcode(fullText) {
@@ -1535,11 +1532,9 @@
         function formatTop5Preweld(text) {
             if (!text) return '';
 
-            // 1. Line
             let lineMatch = text.match(/(?:Line\s*ID|Line|PKG)\s*[:=–-]?\s*(?:PKG\s*)?([0-9]+-[0-9]+)/i);
             let line = lineMatch ? `="${lineMatch[1]}"` : '';
 
-            // 2. Polarity dari Location: (-) -> Anode, (+) -> Cathode
             let locationRaw = extractBlock('Location', text);
             let polarity = '';
             if (/[-–—]/.test(locationRaw) || /anode/i.test(locationRaw)) {
@@ -1548,31 +1543,13 @@
                 polarity = 'Cathode';
             }
 
-            // 3. Issue Date & Date (YYYY-MM-DD)
             let rawDate = extractBlock('Date', text) || extractBlock('Tanggal', text);
             if (!rawDate) {
                 let matchDate = text.match(/\b\d{1,2}\s+[A-Za-z]+\s+\d{4}\b/) || text.match(/\b\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}\b/);
                 if (matchDate) rawDate = matchDate[0];
             }
-            let formattedDate = '';
-            if (rawDate) {
-                let d = new Date(rawDate);
-                if (!isNaN(d.getTime())) {
-                    let y = d.getFullYear();
-                    let m = String(d.getMonth() + 1).padStart(2, '0');
-                    let dt = String(d.getDate()).padStart(2, '0');
-                    formattedDate = `${y}-${m}-${dt}`;
-                }
-            }
-            if (!formattedDate) {
-                let today = new Date();
-                let y = today.getFullYear();
-                let m = String(today.getMonth() + 1).padStart(2, '0');
-                let dt = String(today.getDate()).padStart(2, '0');
-                formattedDate = `${y}-${m}-${dt}`;
-            }
+            let formattedDate = formatDateIso(rawDate);
 
-            // 4. Rootcause
             let rootCause = extractBlock('Cause', text) || extractBlock('Root Cause', text);
             if (!rootCause || rootCause.trim() === '-' || /^action\b/i.test(rootCause.trim())) {
                 rootCause = '-';
@@ -1580,7 +1557,6 @@
                 rootCause = capitalizeFirst(rootCause);
             }
 
-            // 5. Qty Defect
             let qtyRaw = extractBlock('Qty Defect Cell', text) || extractBlock('Qty Defect', text) || extractBlock('Total', text) || extractBlock('Qty', text);
             let qty = '';
             if (qtyRaw) {
@@ -1588,7 +1564,6 @@
                 qty = matchNum ? matchNum[0] : qtyRaw.trim();
             }
 
-            // 6. Temp Action
             let rawActions = [];
             let lines = text.split('\n');
             let isAction = false;
@@ -1622,12 +1597,10 @@
             let formattedAdjustment = rawActions.map(act => `- ${capitalizeFirst(act)}`).join('\n');
             let safeTempAction = formattedAdjustment ? `"${formattedAdjustment.replace(/"/g, '""')}"` : '';
 
-            // 7. PIC
             let picRaw = extractBlock('PIC', text);
             let pic = formatPicNames(picRaw);
 
-            // Kolom Tabel Preweld:
-            // Nomor, Issue, Polarity, Part Issue, Line, Issue Date, Rootcause, Detection, Counting Part, QTY Defect, Temp Action, PIC, Date
+            // Kolom Tabel Preweld
             let row = [
                 '',                     // Nomor
                 '',                     // Issue
