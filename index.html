@@ -1020,10 +1020,24 @@
                 sign = '-';
             }
 
-            if (ng_lower.includes('weight before') || ng_lower.includes('before weight') || ng_lower.includes('before e/f') || ng_lower.includes('before ef')) {
+         // 1. Deteksi Weight Before E/F
+            if (
+                ng_lower.includes('before') && (ng_lower.includes('weight') || ng_lower.includes('ef') || ng_lower.includes('e/f')) ||
+                ng_lower.includes('bw') ||
+                /\bbw\b/i.test(ng_lower)
+            ) {
                 return 'Weight Before E/F';
             }
-            if (ng_lower === 'aw' || /\baw\b/i.test(ng_lower) || ng_lower.includes('weight after') || ng_lower.includes('after weight') || ng_lower.includes('after e/f') || ng_lower.includes('after ef')) {
+
+            // 2. Deteksi Weight After E/F (Mencakup: Afterweight, After Weight, NG Afterweight, AW, dll.)
+            if (
+                ng_lower.includes('afterweight') || 
+                ng_lower.includes('after weight') || 
+                ng_lower.includes('weight after') || 
+                (ng_lower.includes('after') && (ng_lower.includes('weight') || ng_lower.includes('ef') || ng_lower.includes('e/f'))) ||
+                ng_lower === 'aw' || 
+                /\baw\b/i.test(ng_lower)
+            ) {
                 return 'Weight After E/F';
             }
             
