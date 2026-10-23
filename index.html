@@ -1572,13 +1572,13 @@
                 qty = matchNum ? matchNum[0] : qtyRaw.trim();
             }
 
-            // 6. Action / Temp Action
+           // 6. Temp Action (Tanpa kata "Action :", teks lurus rata kiri)
             let rawActions = [];
             let lines = text.split('\n');
             let isAction = false;
 
             for (let l of lines) {
-                let trimmed = l.trim();
+                let trimmed = l.replace(/\u00A0/g, ' ').trim();
                 
                 if (/^[\s*_-]*(Countermeasure|Action|Adjustment)[\s*_-]*[:=]?/i.test(trimmed)) {
                     isAction = true;
@@ -1597,13 +1597,17 @@
                     }
 
                     if (trimmed.length > 0) {
-                        let cleanAction = trimmed.replace(/^(\d+[.)]|[-*•])\s*/, '').replace(/[*_]/g, '').trim();
-                        if (cleanAction) rawActions.push(cleanAction);
+                        // Hapus spasi dan bullet berlebih di awal agar tidak terdorong ke tengah
+                        let cleanAction = trimmed.replace(/^[-*•\s]+/, '').replace(/[*_]/g, '').trim();
+                        if (cleanAction) {
+                            rawActions.push(cleanAction);
+                        }
                     }
                 }
             }
 
-            let formattedAdjustment = rawActions.map(act => `- ${capitalizeFirst(act)}`).join('\n');
+            // Langsung poin-poin tanpa header Action
+            let formattedAdjustment = rawActions.map(act => `- ${act}`).join('\n');
             let safeTempAction = formattedAdjustment ? `"${formattedAdjustment.replace(/"/g, '""')}"` : '';
 
             // 7. PIC
