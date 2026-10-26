@@ -413,7 +413,7 @@
         let top5SubMode = 'normal';
         let warningTimeout = null;
 
-        // Helper format tanggal: YYYY-MM-DD
+        // Helper format tanggal standar: YYYY-MM-DD
         function formatDateIso(rawDate) {
             let d, m, y;
             if (rawDate) {
@@ -443,6 +443,65 @@
             let month = String(today.getMonth() + 1).padStart(2, '0');
             let day = String(today.getDate()).padStart(2, '0');
             return `${year}-${month}-${day}`;
+        }
+
+        // Helper Work Date Bertingkat (Cut-off 06:00 pagi)
+        // Tingkat 1: Berdasarkan Jam / Header WA
+        // Tingkat 2: Berdasarkan Shift (Shift 1 jam 06:00, Shift 3 shift malam)
+        function adjustWorkDate(rawDate, timeStr, fullBlock = '') {
+            let d, m, y;
+            if (rawDate) {
+                let cleanDate = rawDate.trim();
+                let parts = cleanDate.split(/[\/-]/);
+                if (parts.length === 3) {
+                    if (parts[0].length === 4) {
+                        y = parseInt(parts[0], 10);
+                        m = parseInt(parts[1], 10) - 1;
+                        d = parseInt(parts[2], 10);
+                    } else if (parts[2].length === 4 || parts[2].length === 2) {
+                        d = parseInt(parts[0], 10);
+                        m = parseInt(parts[1], 10) - 1;
+                        y = parseInt(parts[2], 10);
+                        if (y < 100) y += 2000;
+                    }
+                }
+            }
+
+            let dateObj = (d && !isNaN(d) && !isNaN(m) && !isNaN(y)) ? new Date(y, m, d) : new Date();
+
+            // 1. CARI JAM
+            let hour = null;
+            let matchHour = (timeStr || '').match(/\b(\d{1,2})[.:]\d{2}\b/);
+            if (matchHour) {
+                hour = parseInt(matchHour[1], 10);
+            } else if (fullBlock) {
+                let waMatch = fullBlock.match(/\[(\d{1,2})[.:]\d{2}/);
+                if (waMatch) {
+                    hour = parseInt(waMatch[1], 10);
+                }
+            }
+
+            // 2. KEPUTUSAN BERTINGKAT
+            if (hour !== null) {
+                // Tingkat 1: Jika ada jam, cut-off jam 06:00 pagi
+                if (hour < 6) {
+                    dateObj.setDate(dateObj.getDate() - 1);
+                }
+            } else {
+                // Tingkat 2: Jika tanpa jam (copas satuan), evaluasi Shift
+                let isShift3 = /shift\s*3\b/i.test(fullBlock);
+                let currentSystemHour = new Date().getHours();
+
+                // Shift 3 yang diproses saat tengah malam s.d. pagi (00:00 - 06:59)
+                if (isShift3 && currentSystemHour < 7) {
+                    dateObj.setDate(dateObj.getDate() - 1);
+                }
+            }
+
+            let outY = dateObj.getFullYear();
+            let outM = String(dateObj.getMonth() + 1).padStart(2, '0');
+            let outD = String(dateObj.getDate()).padStart(2, '0');
+            return `${outY}-${outM}-${outD}`;
         }
 
         // Helper format tanggal Barcode: D-Mmm-YY (misal: 22-Oct-26)
@@ -794,7 +853,7 @@
             return result;
         }
 
-        // 2. FORMAT WRINKLE (DENGAN TANGGAL DI KOLOM PALING KIRI)
+        // 2. FORMAT WRINKLE (WORK DATE BERTINGKAT)
         function formatExcel(fullText) {
             if (!fullText) return '';
 
@@ -833,17 +892,12 @@
 
                 if (!line) return;
 
-                // Ekstraksi Date untuk Wrinkle
                 let rawDate = extractBlock('Date', text) || extractBlock('Tanggal', text);
                 if (!rawDate) {
                     let matchDate = text.match(/\b\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}\b/) ||
                                     text.match(/\b\d{1,2}\s+[A-Za-z]+\s+\d{2,4}\b/);
                     if (matchDate) rawDate = matchDate[0];
                 }
-                let date = formatDateIso(rawDate);
-
-                let matchProb = text.match(/(?:^|\n)[\s*_-]*Problem[\s*_-]*[:=–-]\s*([^\n]+)/i);
-                let problem = matchProb ? matchProb[1].trim() : extractBlock('Problem', text);
 
                 let timeRaw = extractBlock('TIME', text) || extractBlock('Jam', text) || extractBlock('Waktu', text);
                 if (!timeRaw) {
@@ -855,6 +909,12 @@
                         if (fallbackTimes) timeRaw = fallbackTimes.join(' & ');
                     }
                 }
+
+                // Work Date bertingkat cut-off jam 06:00
+                let date = adjustWorkDate(rawDate, timeRaw, text);
+
+                let matchProb = text.match(/(?:^|\n)[\s*_-]*Problem[\s*_-]*[:=–-]\s*([^\n]+)/i);
+                let problem = matchProb ? matchProb[1].trim() : extractBlock('Problem', text);
 
                 let pouchId = extractBlock('Pouch ID', text) || extractBlock('Pouch Lot', text) || extractBlock('Pouch', text) || extractBlock('Lot Pouch', text);
                 let countRaw = extractBlock('Count', text);
@@ -1020,7 +1080,7 @@
                 sign = '-';
             }
 
-         // 1. Deteksi Weight Before E/F
+            // 1. Deteksi Weight Before E/F
             if (
                 ng_lower.includes('before') && (ng_lower.includes('weight') || ng_lower.includes('ef') || ng_lower.includes('e/f')) ||
                 ng_lower.includes('bw') ||
@@ -1029,7 +1089,7 @@
                 return 'Weight Before E/F';
             }
 
-            // 2. Deteksi Weight After E/F (Mencakup: Afterweight, After Weight, NG Afterweight, AW, dll.)
+            // 2. Deteksi Weight After E/F
             if (
                 ng_lower.includes('afterweight') || 
                 ng_lower.includes('after weight') || 
@@ -1127,7 +1187,7 @@
             return raw;
         }
 
-        // 4.A FORMAT REWORK NORMAL (DENGAN TANGGAL DI KOLOM PALING KIRI)
+        // 4.A FORMAT REWORK NORMAL (WORK DATE BERTINGKAT & PERBAIKAN TAB PIC)
         function formatRework(fullText) {
             if (!fullText) return '';
 
@@ -1136,10 +1196,9 @@
                 .replace(/\u00A0/g, ' ')
                 .replace(/\r\n/g, '\n');
 
-            cleanFull = cleanFull.replace(/\[\d{1,2}[.:]\d{2},\s*\d{1,2}\/\d{1,2}\/\d{2,4}\]\s*[^:\n]+:\s*/g, '\n___WA_SPLIT___\n');
-
+            // Tetap simpan stempel waktu WA saat split batch agar jam terbaca
             let rawChunks = cleanFull
-                .split('___WA_SPLIT___')
+                .split(/(?=\[\d{1,2}[.:]\d{2},\s*\d{1,2}\/\d{1,2}\/\d{2,4}\])/g)
                 .map(c => c.trim())
                 .filter(c => c.length > 0);
 
@@ -1175,15 +1234,18 @@
 
                 if (!line) return;
 
-                // Ekstraksi Date untuk Rework
+                // 1. Ekstraksi Date & Time untuk Work Date Bertingkat
                 let rawDate = extractBlock('Date', text) || extractBlock('Tanggal', text);
                 if (!rawDate) {
                     let matchDate = text.match(/(?:Rework\s+)?(\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4})/i) ||
                                     text.match(/\b\d{1,2}\s+[A-Za-z]+\s+\d{2,4}\b/);
                     if (matchDate) rawDate = matchDate[1] || matchDate[0];
                 }
-                let date = formatDateIso(rawDate);
 
+                let timeRaw = extractBlock('Time', text) || extractBlock('Jam', text) || extractBlock('Waktu', text);
+                let date = adjustWorkDate(rawDate, timeRaw, text);
+
+                // 2. Ekstraksi NG Name
                 let ngRaw = extractBlock('NG', text);
                 if (!ngRaw) {
                     let matchNg = text.match(/(?:^|\n)[\s*•_–.-]*NG\s*[:=–-]?\s*(.*)/i);
@@ -1192,29 +1254,27 @@
                     }
                 }
 
-                // Fallback pencarian defect
+                // Fallback pencarian defect (abaikan section & izinkan karakter >= 2 seperti AW/LC/BW)
                 if (!ngRaw) {
                     let lines = text.split('\n').map(l => l.trim()).filter(Boolean);
                     for (let l of lines) {
                         let cleanedLine = l.replace(/^[•*_\-–.\s]+/, '').trim();
-
-                        // Lewati header atau nama section (termasuk el filling, cell assy, tw)
                         if (/^(?:rework|[rework]|[problem report]|pkg|#|line|shift|date|tanggal|cell\s*[-_]?\s*id|total|status|pic|cc|note|reason|lot\s*id|el\s*filling|cell\s*assy|tw|ca|el)\b/i.test(cleanedLine)) {
                             continue;
                         }
                         if (/^tape\s*vision/i.test(cleanedLine)) {
                             continue;
                         }
-                        // Menjadi:
-if (cleanedLine.length >= 2) {
-    ngRaw = cleanedLine;
-    break;
-}
+                        if (cleanedLine.length >= 2) {
+                            ngRaw = cleanedLine;
+                            break;
+                        }
                     }
                 }
 
                 let ngName = matchKlasifikasiNG(text, ngRaw);
 
+                // 3. Section
                 let section = 'TW';
                 let lowerText = text.toLowerCase();
                 let lowerNg = (ngName || '').toLowerCase();
@@ -1310,20 +1370,21 @@ if (cleanedLine.length >= 2) {
                     let pkgId = (section === 'EL') ? cellId : '';
                     let stkId = (section === 'TW' || section === 'CA') ? cellId : '';
 
-                   // Susunan Kolom Rework: Date, Line, Section, NG Name, Lot ID, PKG ID, STK ID Lama, Status rework, Reason, Detail Reason, PIC
-let row = [
-    date,
-    line,
-    section,
-    ngName,
-    lotId,
-    pkgId,
-    stkId,
-    status,
-    reason || '',
-    detailReason || '',
-    pic || ''
-].map(col => (col || '').toString().replace(/[\r\n]+/g, ' ').trim());
+                    // Susunan Kolom Rework (11 kolom pemisah utuh):
+                    // Date \t Line \t Section \t NG Name \t Lot ID \t PKG ID \t STK ID Lama \t Status \t Reason \t Detail Reason \t PIC
+                    let row = [
+                        date,
+                        line,
+                        section,
+                        ngName,
+                        lotId,
+                        pkgId,
+                        stkId,
+                        status,
+                        reason || '',
+                        detailReason || '',
+                        pic || ''
+                    ].map(col => (col || '').toString().replace(/[\r\n]+/g, ' ').trim());
 
                     allResults.push(row.join('\t'));
                 });
@@ -1347,10 +1408,8 @@ let row = [
                 .replace(/\u00A0/g, ' ')
                 .replace(/\r\n/g, '\n');
 
-            cleanFull = cleanFull.replace(/\[\d{1,2}[.:]\d{2},\s*\d{1,2}\/\d{1,2}\/\d{2,4}\]\s*[^:\n]+:\s*/g, '\n___WA_SPLIT___\n');
-
             let rawChunks = cleanFull
-                .split('___WA_SPLIT___')
+                .split(/(?=\[\d{1,2}[.:]\d{2},\s*\d{1,2}\/\d{1,2}\/\d{2,4}\])/g)
                 .map(c => c.trim())
                 .filter(c => c.length > 0);
 
@@ -1380,12 +1439,10 @@ let row = [
             let allResults = [];
 
             blocks.forEach(text => {
-                // 1. Line
                 let lineMatch = text.match(/(?:^|\n)\s*(?:#\s*PKG|Line\s*[:=–-]\s*PKG|Line\s*[:=–-]|PKG|#)?\s*([0-9]+-[0-9]+)/i);
                 let line = lineMatch ? `="${lineMatch[1]}"` : '';
                 if (!line) return;
 
-                // 2. Date
                 let rawDate = extractBlock('Date', text) || extractBlock('Tanggal', text);
                 if (!rawDate) {
                     let matchDate = text.match(/(?:Rework\s+)?(\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4})/i) ||
@@ -1394,7 +1451,6 @@ let row = [
                 }
                 let date = formatDateBarcode(rawDate);
 
-                // 3. Time
                 let timeRaw = extractBlock('Time', text) || extractBlock('Jam', text) || extractBlock('Waktu', text);
                 let time = '';
                 if (timeRaw) {
@@ -1402,7 +1458,6 @@ let row = [
                     if (matchTime) time = matchTime[0].replace('.', ':');
                 }
 
-                // 4. Shift (1 -> A, 2 -> B, 3 -> C)
                 let shiftRaw = extractBlock('Shift', text);
                 let shiftNum = '';
                 if (shiftRaw) {
@@ -1420,10 +1475,8 @@ let row = [
                 else if (shiftNum === '3') shift = 'C';
                 else if (shiftRaw) shift = cleanText(shiftRaw);
 
-                // 5. Lot ID
                 let lotId = extractBlock('Lot ID', text) || extractBlock('LotID', text) || extractBlock('Lot', text) || '';
 
-                // 6. Side A/B
                 let side = '';
                 let matchSide = text.match(/Side\s*([A-Za-z0-9\/\-]+)/i);
                 if (matchSide) {
@@ -1434,7 +1487,6 @@ let row = [
                     else if (/\bSide B\b/i.test(text)) side = 'B';
                 }
 
-                // 7. Qty
                 let qtyRaw = extractBlock('Total', text) || extractBlock('Qty', text) || extractBlock('Count', text);
                 let qty = '';
                 if (qtyRaw) {
@@ -1442,30 +1494,20 @@ let row = [
                     qty = matchNum ? matchNum[0] : qtyRaw;
                 }
 
-                // 8. NG Ketika (Standarisasi Normal Run)
                 let ngKetika = extractBlock('NG Ketika', text) || extractBlock('Ketika', text);
                 if (/normal/i.test(ngKetika)) {
                     ngKetika = 'Normal Run';
                 }
 
-                // 9. Ink Level
                 let inkLevel = extractBlock('Ink Level', text) || extractBlock('Ink', text);
-
-                // 10. Category
                 let category = extractBlock('Category', text) || extractBlock('Kategori', text);
-
-                // 11. Action
                 let action = extractBlock('Action', text) || extractBlock('Countermeasure', text);
-
-                // 12. Status
                 let status = 'Closed';
 
-                // 13. PIC
                 let picRaw = extractBlock('PIC', text);
                 if (picRaw) picRaw = picRaw.replace(/\([^)]*\)/g, '').trim();
                 let pic = formatPicNames(picRaw);
 
-                // Kolom Excel: Date, Time, Shift, Line, Lot ID, Side A/B, Qty, NG Ketika, Ink Level, Category, Action, Status, PIC
                 let row = [
                     date,
                     time,
@@ -1545,15 +1587,13 @@ let row = [
             return `="${line}"\t${rootCause}\t${safeAdjustment}`;
         }
 
-       // 5.B FORMAT TOP 5 PREWELD
+        // 5.B FORMAT TOP 5 PREWELD
         function formatTop5Preweld(text) {
             if (!text) return '';
 
-            // 1. Line
             let lineMatch = text.match(/(?:Line\s*ID|Line|PKG)\s*[:=–-]?\s*(?:PKG\s*)?([0-9]+-[0-9]+)/i);
             let line = lineMatch ? `="${lineMatch[1]}"` : '';
 
-            // 2. Polarity dari Location: (-) -> Anode, (+) -> Cathode
             let locationRaw = extractBlock('Location', text);
             let polarity = '';
             if (/[-–—]/.test(locationRaw) || /anode/i.test(locationRaw)) {
@@ -1562,7 +1602,6 @@ let row = [
                 polarity = 'Cathode';
             }
 
-            // 3. Issue Date & Date (YYYY-MM-DD)
             let rawDate = extractBlock('Date', text) || extractBlock('Tanggal', text);
             if (!rawDate) {
                 let matchDate = text.match(/\b\d{1,2}\s+[A-Za-z]+\s+\d{4}\b/) || text.match(/\b\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}\b/);
@@ -1570,7 +1609,6 @@ let row = [
             }
             let formattedDate = formatDateIso(rawDate);
 
-            // 4. Rootcause
             let rootCause = extractBlock('Cause', text) || extractBlock('Root Cause', text);
             if (!rootCause || rootCause.trim() === '-' || /^action\b/i.test(rootCause.trim())) {
                 rootCause = '-';
@@ -1578,7 +1616,6 @@ let row = [
                 rootCause = capitalizeFirst(rootCause);
             }
 
-            // 5. Qty Defect
             let qtyRaw = extractBlock('Qty Defect Cell', text) || 
                          extractBlock('Qty Defect', text) || 
                          extractBlock('Total', text) || 
@@ -1589,7 +1626,6 @@ let row = [
                 qty = matchNum ? matchNum[0] : qtyRaw.trim();
             }
 
-           // 6. Temp Action (Tanpa kata "Action :", teks lurus rata kiri)
             let rawActions = [];
             let lines = text.split('\n');
             let isAction = false;
@@ -1614,7 +1650,6 @@ let row = [
                     }
 
                     if (trimmed.length > 0) {
-                        // Hapus spasi dan bullet berlebih di awal agar tidak terdorong ke tengah
                         let cleanAction = trimmed.replace(/^[-*•\s]+/, '').replace(/[*_]/g, '').trim();
                         if (cleanAction) {
                             rawActions.push(cleanAction);
@@ -1623,28 +1658,12 @@ let row = [
                 }
             }
 
-            // Langsung poin-poin tanpa header Action
             let formattedAdjustment = rawActions.map(act => `- ${act}`).join('\n');
             let safeTempAction = formattedAdjustment ? `"${formattedAdjustment.replace(/"/g, '""')}"` : '';
 
-            // 7. PIC
             let picRaw = extractBlock('PIC', text);
             let pic = formatPicNames(picRaw);
 
-            // Susunan Kolom (Paste mulai dari sel ISSUE):
-            // 1. Issue                  -> '""' (sel kosong eksplisit untuk Excel)
-            // 2. Polarity               -> polarity (Anode / Cathode)
-            // 3. Part Issue             -> '' (kosong)
-            // 4. Line                   -> line
-            // 5. Issue Date             -> formattedDate
-            // 6. Rootcause              -> rootCause
-            // 7. Detection              -> '' (kosong)
-            // 8. [Kolom Hide]           -> '' (kosong)
-            // 9. Counting Part          -> '' (kosong)
-            // 10. QTY Defect            -> qty
-            // 11. Temp Action           -> safeTempAction
-            // 12. PIC                   -> pic
-            // 13. Date                  -> formattedDate
             let row = [
                 '""',
                 polarity,
@@ -1702,9 +1721,8 @@ let row = [
             }
         }
 
-     function copyOutput() {
+        function copyOutput() {
             const outputEl = document.getElementById('outputText');
-            // Menghapus baris kosong di awal/akhir tanpa memotong tab atau karakter awal
             let textToCopy = outputEl ? outputEl.value.replace(/^[\r\n]+|[\r\n]+$/g, '') : '';
 
             if (!textToCopy) return;
@@ -1734,7 +1752,6 @@ let row = [
             let clean = text.replace(/\u00A0/g, ' ');
             let lower = clean.toLowerCase();
 
-            // 1. Downtime / Losskey & Top 5 Preweld
             const hasDowntimeMarkers = 
                 lower.includes('downtime bot') || 
                 lower.includes('countermeasure') || 
@@ -1755,13 +1772,11 @@ let row = [
                 return;
             }
 
-            // 2. Crack
             if (lower.includes('crack') || lower.includes('pinhole') || (lower.includes('lot id') && lower.includes('pouch lot'))) {
                 if (currentMode !== 'crack') setMode('crack', true);
                 return;
             }
 
-            // 3. Wrinkle
             const isExplicitWrinkle = 
                 lower.includes('pouch cup wrinkle') || 
                 lower.includes('wrinkle') || 
@@ -1772,7 +1787,6 @@ let row = [
                 return;
             }
 
-            // 4. Rework
             const isExplicitRework = 
                 lower.includes('cell id') || 
                 lower.includes('cellid') || 
@@ -1801,7 +1815,7 @@ let row = [
             });
         }
 
-        // Inisialisasi awal saat web pertama kali dimuat
+        // Inisialisasi awal saat web dimuat
         setMode('downtime', true);
     </script>
 </body>
