@@ -1196,10 +1196,12 @@
                 if (!ngRaw) {
                     let lines = text.split('\n').map(l => l.trim()).filter(Boolean);
                     for (let l of lines) {
-                        if (/^(?:rework|[rework]|[problem report]|pkg|#|line|shift|date|tanggal|cell\s*[-_]?\s*id|total|status|pic|cc|note|reason|lot\s*id)/i.test(l)) {
+                        let cleanedLine = l.replace(/^[•*_\-–.\s]+/, '').trim();
+
+                        // Lewati header atau nama section (termasuk el filling, cell assy, tw)
+                        if (/^(?:rework|[rework]|[problem report]|pkg|#|line|shift|date|tanggal|cell\s*[-_]?\s*id|total|status|pic|cc|note|reason|lot\s*id|el\s*filling|cell\s*assy|tw|ca|el)\b/i.test(cleanedLine)) {
                             continue;
                         }
-                        let cleanedLine = l.replace(/^[•*_\-–.\s]+/, '').trim();
                         if (/^tape\s*vision/i.test(cleanedLine)) {
                             continue;
                         }
