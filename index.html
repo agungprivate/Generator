@@ -1307,20 +1307,20 @@
                     let pkgId = (section === 'EL') ? cellId : '';
                     let stkId = (section === 'TW' || section === 'CA') ? cellId : '';
 
-                    // Susunan Kolom Rework: Date, Line, Section, NG Name, Lot ID, PKG ID, STK ID Lama, Status rework, Reason, Detail Reason, PIC
-                    let row = [
-                        date,           // Kolom paling kiri (YYYY-MM-DD)
-                        line,
-                        section,
-                        ngName,
-                        lotId,
-                        pkgId,
-                        stkId,
-                        status,
-                        reason,
-                        detailReason,
-                        pic
-                    ].map(col => (col || '').toString().replace(/[\r\n]+/g, ' ').trim());
+                   // Susunan Kolom Rework: Date, Line, Section, NG Name, Lot ID, PKG ID, STK ID Lama, Status rework, Reason, Detail Reason, PIC
+let row = [
+    date,
+    line,
+    section,
+    ngName,
+    lotId,
+    pkgId,
+    stkId,
+    status,
+    reason || '',
+    detailReason || '',
+    pic || ''
+].map(col => (col || '').toString().replace(/[\r\n]+/g, ' ').trim());
 
                     allResults.push(row.join('\t'));
                 });
