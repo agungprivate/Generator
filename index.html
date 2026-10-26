@@ -445,9 +445,7 @@
             return `${year}-${month}-${day}`;
         }
 
-        // Helper Work Date Bertingkat (Cut-off 06:00 pagi)
-        // Tingkat 1: Berdasarkan Jam / Header WA
-        // Tingkat 2: Berdasarkan Shift (Shift 1 jam 06:00, Shift 3 shift malam)
+       // Helper Work Date Bertingkat (Cut-off 06:00 pagi)
         function adjustWorkDate(rawDate, timeStr, fullBlock = '') {
             let d, m, y;
             if (rawDate) {
@@ -481,19 +479,16 @@
                 }
             }
 
-            // 2. KEPUTUSAN BERTINGKAT
+            // 2. KEPUTUSAN WORK DATE
             if (hour !== null) {
-                // Tingkat 1: Jika ada jam, cut-off jam 06:00 pagi
+                // Tingkat 1: Jika ada jam (dari time atau stempel WA), cut-off jam 06:00 pagi
                 if (hour < 6) {
                     dateObj.setDate(dateObj.getDate() - 1);
                 }
             } else {
-                // Tingkat 2: Jika tanpa jam (copas satuan), evaluasi Shift
+                // Tingkat 2: Tanpa jam (copas satuan), jika tertulis Shift 3 otomatis mundur 1 hari
                 let isShift3 = /shift\s*3\b/i.test(fullBlock);
-                let currentSystemHour = new Date().getHours();
-
-                // Shift 3 yang diproses saat tengah malam s.d. pagi (00:00 - 06:59)
-                if (isShift3 && currentSystemHour < 7) {
+                if (isShift3) {
                     dateObj.setDate(dateObj.getDate() - 1);
                 }
             }
