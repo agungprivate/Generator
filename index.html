@@ -445,7 +445,7 @@
             return `${year}-${month}-${day}`;
         }
 
-       // Helper Work Date Bertingkat (Cut-off 06:00 pagi)
+      // Helper Work Date (Cut-off jam 06:00 pagi)
         function adjustWorkDate(rawDate, timeStr, fullBlock = '') {
             let d, m, y;
             if (rawDate) {
@@ -467,7 +467,7 @@
 
             let dateObj = (d && !isNaN(d) && !isNaN(m) && !isNaN(y)) ? new Date(y, m, d) : new Date();
 
-            // 1. CARI JAM
+            // 1. CARI JAM DARI WAKTU EKSPLISIT ATAU HEADER WA
             let hour = null;
             let matchHour = (timeStr || '').match(/\b(\d{1,2})[.:]\d{2}\b/);
             if (matchHour) {
@@ -479,18 +479,10 @@
                 }
             }
 
-            // 2. KEPUTUSAN WORK DATE
-            if (hour !== null) {
-                // Tingkat 1: Jika ada jam (dari time atau stempel WA), cut-off jam 06:00 pagi
-                if (hour < 6) {
-                    dateObj.setDate(dateObj.getDate() - 1);
-                }
-            } else {
-                // Tingkat 2: Tanpa jam (copas satuan), jika tertulis Shift 3 otomatis mundur 1 hari
-                let isShift3 = /shift\s*3\b/i.test(fullBlock);
-                if (isShift3) {
-                    dateObj.setDate(dateObj.getDate() - 1);
-                }
+            // 2. ATURAN MUNDUR TANGGAL:
+            // HANYA mundur jika jam benar-benar terdeteksi antara 00:00 s.d. 05:59 subuh
+            if (hour !== null && hour < 6) {
+                dateObj.setDate(dateObj.getDate() - 1);
             }
 
             let outY = dateObj.getFullYear();
