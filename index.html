@@ -1205,10 +1205,11 @@
                         if (/^tape\s*vision/i.test(cleanedLine)) {
                             continue;
                         }
-                        if (cleanedLine.length > 2) {
-                            ngRaw = cleanedLine;
-                            break;
-                        }
+                        // Menjadi:
+if (cleanedLine.length >= 2) {
+    ngRaw = cleanedLine;
+    break;
+}
                     }
                 }
 
