@@ -979,7 +979,7 @@
             return jams.map(j => `${line}_${j}_${lotId}_${pouchLot}_${status}`).join('\n');
         }
 
-        // 3.B FORMAT CRACK - EXCEL
+      // 3.B FORMAT CRACK - EXCEL
         function formatCrackExcel(text) {
             let lineMatch = text.match(/(?:Line|PKG)\s*[:=–-]?\s*([0-9]+[\.\-_][0-9]+)/i);
             let line = lineMatch ? lineMatch[1].replace(/[\._]/g, '-') : extractBlock('Line', text).replace(/[\._]/g, '-');
@@ -1042,8 +1042,8 @@
             return rows.join('\n');
         }
 
-        // 3.C FORMAT CRACK - QA
-        // Format Kolom: [Lompat No]\tDate(MM/DD/YYYY)\tTime\tLine\tLot ID\tPouch Lot\tCount Cleaning cycle\tIssue
+      // 3.C FORMAT CRACK - QA
+        // Format Kolom: [Auto No (+1)]\tDate(YYYY-MM-DD)\tTime\tLine\tLot ID\tPouch Lot\tCount Cleaning cycle\tIssue
         function formatCrackQA(text) {
             let lineMatch = text.match(/(?:Line|PKG)\s*[:=–-]?\s*([0-9]+[\.\-_][0-9]+)/i);
             let line = lineMatch ? lineMatch[1].replace(/[\._]/g, '-') : extractBlock('Line', text).replace(/[\._]/g, '-');
@@ -1051,7 +1051,7 @@
             let lotId = extractBlock('Lot ID', text) || extractBlock('LotID', text) || extractBlock('Lot', text);
             let pouchLot = extractBlock('Pouch Lot', text) || extractBlock('Pouch ID', text) || extractBlock('Lot Pouch', text);
 
-            // Ekstraksi tanggal acuan dari Lot ID (format MM/DD/YYYY)
+            // Ekstraksi tanggal acuan dari 2 digit tanggal di Lot ID (YYYY-MM-DD)
             let date = '';
             let matchLotDate = (lotId || '').match(/[A-Z0-9]{4,5}(\d{2})/i);
             if (matchLotDate) {
@@ -1059,7 +1059,7 @@
                 let today = new Date();
                 let y = today.getFullYear();
                 let m = String(today.getMonth() + 1).padStart(2, '0');
-                date = `${m}/${day}/${y}`;
+                date = `${y}-${m}-${day}`;
             }
 
             if (!date) {
@@ -1068,14 +1068,7 @@
                     let matchDate = text.match(/\b\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}\b/);
                     if (matchDate) rawDate = matchDate[0];
                 }
-                if (rawDate) {
-                    let iso = formatDateIso(rawDate);
-                    let p = iso.split('-');
-                    date = `${p[1]}/${p[2]}/${p[0]}`;
-                } else {
-                    let today = new Date();
-                    date = `${String(today.getMonth() + 1).padStart(2, '0')}/${String(today.getDate()).padStart(2, '0')}/${today.getFullYear()}`;
-                }
+                date = formatDateIso(rawDate);
             }
 
             let timeRaw = extractBlock('Time', text) || extractBlock('Jam', text) || extractBlock('Waktu', text);
@@ -1101,8 +1094,10 @@
                 issue = 'Crack';
             }
 
-            // [Lompat No]\tDate\tTime\tLine\tLot ID\tPouch Lot\tCount Cleaning cycle\tIssue
-            return `\t${date}\t${time}\t${line}\t${lotId}\t${pouchLot}\t${count}\t${issue}`;
+            // Rumus Excel otomatis nomor sel atas + 1
+            const autoFormulaNo = '=OFFSET(INDIRECT(ADDRESS(ROW(),COLUMN())),-1,0)+1';
+
+            return `${autoFormulaNo}\t${date}\t${time}\t${line}\t${lotId}\t${pouchLot}\t${count}\t${issue}`;
         }
 
         // FUNGSI KLASIFIKASI NG NAME (REWORK)
@@ -1477,13 +1472,14 @@
                 let line = lineMatch ? `="${lineMatch[1]}"` : '';
                 if (!line) return;
 
+                // Tanggal diseragamkan ke YYYY-MM-DD
                 let rawDate = extractBlock('Date', text) || extractBlock('Tanggal', text);
                 if (!rawDate) {
                     let matchDate = text.match(/(?:Rework\s+)?(\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4})/i) ||
                                     text.match(/\b\d{1,2}\s+[A-Za-z]+\s+\d{2,4}\b/);
                     if (matchDate) rawDate = matchDate[1] || matchDate[0];
                 }
-                let date = formatDateBarcode(rawDate);
+                let date = formatDateIso(rawDate);
 
                 let timeRaw = extractBlock('Time', text) || extractBlock('Jam', text) || extractBlock('Waktu', text);
                 let time = '';
@@ -1621,7 +1617,7 @@
             return `="${line}"\t${rootCause}\t${safeAdjustment}`;
         }
 
-        // 5.B FORMAT TOP 5 PREWELD
+       // 5.B FORMAT TOP 5 PREWELD
         function formatTop5Preweld(text) {
             if (!text) return '';
 
@@ -1641,6 +1637,7 @@
                 let matchDate = text.match(/\b\d{1,2}\s+[A-Za-z]+\s+\d{4}\b/) || text.match(/\b\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}\b/);
                 if (matchDate) rawDate = matchDate[0];
             }
+            // Tanggal standar YYYY-MM-DD
             let formattedDate = formatDateIso(rawDate);
 
             let rootCause = extractBlock('Cause', text) || extractBlock('Root Cause', text);
