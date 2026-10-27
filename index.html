@@ -1617,13 +1617,15 @@
             return `="${line}"\t${rootCause}\t${safeAdjustment}`;
         }
 
-       // 5.B FORMAT TOP 5 PREWELD
+       // 5.B FORMAT TOP 5 PREWELD (MULAI DARI KOLOM NO DENGAN AUTO FORMULA + 1)
         function formatTop5Preweld(text) {
             if (!text) return '';
 
+            // 1. Line
             let lineMatch = text.match(/(?:Line\s*ID|Line|PKG)\s*[:=–-]?\s*(?:PKG\s*)?([0-9]+-[0-9]+)/i);
             let line = lineMatch ? `="${lineMatch[1]}"` : '';
 
+            // 2. Polarity dari Location: (-) -> Anode, (+) -> Cathode
             let locationRaw = extractBlock('Location', text);
             let polarity = '';
             if (/[-–—]/.test(locationRaw) || /anode/i.test(locationRaw)) {
@@ -1632,14 +1634,15 @@
                 polarity = 'Cathode';
             }
 
+            // 3. Issue Date & Date (Format ISO: YYYY-MM-DD)
             let rawDate = extractBlock('Date', text) || extractBlock('Tanggal', text);
             if (!rawDate) {
                 let matchDate = text.match(/\b\d{1,2}\s+[A-Za-z]+\s+\d{4}\b/) || text.match(/\b\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}\b/);
                 if (matchDate) rawDate = matchDate[0];
             }
-            // Tanggal standar YYYY-MM-DD
             let formattedDate = formatDateIso(rawDate);
 
+            // 4. Rootcause
             let rootCause = extractBlock('Cause', text) || extractBlock('Root Cause', text);
             if (!rootCause || rootCause.trim() === '-' || /^action\b/i.test(rootCause.trim())) {
                 rootCause = '-';
@@ -1647,6 +1650,7 @@
                 rootCause = capitalizeFirst(rootCause);
             }
 
+            // 5. Qty Defect
             let qtyRaw = extractBlock('Qty Defect Cell', text) || 
                          extractBlock('Qty Defect', text) || 
                          extractBlock('Total', text) || 
@@ -1657,6 +1661,7 @@
                 qty = matchNum ? matchNum[0] : qtyRaw.trim();
             }
 
+            // 6. Temp Action
             let rawActions = [];
             let lines = text.split('\n');
             let isAction = false;
@@ -1692,11 +1697,31 @@
             let formattedAdjustment = rawActions.map(act => `- ${act}`).join('\n');
             let safeTempAction = formattedAdjustment ? `"${formattedAdjustment.replace(/"/g, '""')}"` : '';
 
+            // 7. PIC
             let picRaw = extractBlock('PIC', text);
             let pic = formatPicNames(picRaw);
 
+            // 8. Formula Excel Otomatis +1 dari nomor baris atas
+            const autoFormulaNo = '=OFFSET(INDIRECT(ADDRESS(ROW(),COLUMN())),-1,0)+1';
+
+            // Susunan Kolom (Paste mulai dari sel No paling kiri):
+            // 1. No                     -> autoFormulaNo (+1)
+            // 2. Issue                  -> '' (kosong untuk dropdown manual)
+            // 3. Polarity               -> polarity (Anode / Cathode)
+            // 4. Part Issue             -> '' (kosong)
+            // 5. Line                   -> line
+            // 6. Issue Date             -> formattedDate
+            // 7. Rootcause              -> rootCause
+            // 8. Detection              -> '' (kosong)
+            // 9. [Kolom Hide]           -> '' (kosong)
+            // 10. Counting Part         -> '' (kosong)
+            // 11. QTY Defect            -> qty
+            // 12. Temp Action           -> safeTempAction
+            // 13. PIC                   -> pic
+            // 14. Date                  -> formattedDate
             let row = [
-                '""',
+                autoFormulaNo,
+                '',
                 polarity,
                 '',
                 line,
