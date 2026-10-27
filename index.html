@@ -369,10 +369,11 @@
             <button class="btn-sub-mode" id="btnTop5Preweld" type="button" onclick="setTop5SubMode('preweld')">Preweld</button>
         </div>
 
-        <!-- SUB-TAB CRACK -->
+        <!-- SUB-TAB CRACK (Image, Excel, QA) -->
         <div class="sub-mode-selector" id="crackSubTabs">
             <button class="btn-sub-mode active" id="btnCrackImage" type="button" onclick="setCrackSubMode('image')">Image</button>
             <button class="btn-sub-mode" id="btnCrackExcel" type="button" onclick="setCrackSubMode('excel')">Excel</button>
+            <button class="btn-sub-mode" id="btnCrackQA" type="button" onclick="setCrackSubMode('qa')">QA</button>
         </div>
 
         <!-- SUB-TAB REWORK -->
@@ -445,7 +446,7 @@
             return `${year}-${month}-${day}`;
         }
 
-      // Helper Work Date (Cut-off jam 06:00 pagi)
+        // Helper Work Date (Cut-off 06:00 dengan validasi Shift & Jam)
         function adjustWorkDate(rawDate, timeStr, fullBlock = '') {
             let d, m, y;
             if (rawDate) {
@@ -467,7 +468,6 @@
 
             let dateObj = (d && !isNaN(d) && !isNaN(m) && !isNaN(y)) ? new Date(y, m, d) : new Date();
 
-            // 1. CARI JAM DARI WAKTU EKSPLISIT ATAU HEADER WA
             let hour = null;
             let matchHour = (timeStr || '').match(/\b(\d{1,2})[.:]\d{2}\b/);
             if (matchHour) {
@@ -479,9 +479,9 @@
                 }
             }
 
-            // 2. ATURAN MUNDUR TANGGAL:
-            // HANYA mundur jika jam benar-benar terdeteksi antara 00:00 s.d. 05:59 subuh
-            if (hour !== null && hour < 6) {
+            let isShift3 = /shift\s*3\b/i.test(fullBlock);
+
+            if (hour !== null && hour < 6 && isShift3) {
                 dateObj.setDate(dateObj.getDate() - 1);
             }
 
@@ -529,10 +529,12 @@
 
             const btnImg = document.getElementById('btnCrackImage');
             const btnXls = document.getElementById('btnCrackExcel');
+            const btnQA = document.getElementById('btnCrackQA');
 
-            if (btnImg && btnXls) {
+            if (btnImg && btnXls && btnQA) {
                 btnImg.classList.toggle('active', subMode === 'image');
                 btnXls.classList.toggle('active', subMode === 'excel');
+                btnQA.classList.toggle('active', subMode === 'qa');
             }
 
             const inputEl = document.getElementById('inputText');
@@ -540,9 +542,14 @@
             
             if (inputEl && inputEl.value.trim() !== '') {
                 let input = inputEl.value.trim();
-                let output = (crackSubMode === 'image') 
-                    ? formatVisionNaming(input) 
-                    : formatCrackExcel(input);
+                let output = '';
+                if (crackSubMode === 'image') {
+                    output = formatVisionNaming(input);
+                } else if (crackSubMode === 'excel') {
+                    output = formatCrackExcel(input);
+                } else if (crackSubMode === 'qa') {
+                    output = formatCrackQA(input);
+                }
 
                 if (outputEl) outputEl.value = output;
             } else if (outputEl) {
@@ -840,7 +847,7 @@
             return result;
         }
 
-        // 2. FORMAT WRINKLE (WORK DATE BERTINGKAT)
+        // 2. FORMAT WRINKLE
         function formatExcel(fullText) {
             if (!fullText) return '';
 
@@ -897,7 +904,6 @@
                     }
                 }
 
-                // Work Date bertingkat cut-off jam 06:00
                 let date = adjustWorkDate(rawDate, timeRaw, text);
 
                 let matchProb = text.match(/(?:^|\n)[\s*_-]*Problem[\s*_-]*[:=–-]\s*([^\n]+)/i);
@@ -973,7 +979,7 @@
             return jams.map(j => `${line}_${j}_${lotId}_${pouchLot}_${status}`).join('\n');
         }
 
-        // 3.B FORMAT CRACK - EXCEL (ACUAN TANGGAL LANGSUNG DARI LOT ID)
+        // 3.B FORMAT CRACK - EXCEL
         function formatCrackExcel(text) {
             let lineMatch = text.match(/(?:Line|PKG)\s*[:=–-]?\s*([0-9]+[\.\-_][0-9]+)/i);
             let line = lineMatch ? lineMatch[1].replace(/[\._]/g, '-') : extractBlock('Line', text).replace(/[\._]/g, '-');
@@ -981,7 +987,6 @@
             let lotId = extractBlock('Lot ID', text) || extractBlock('LotID', text) || extractBlock('Lot', text);
             let pouchLot = extractBlock('Pouch Lot', text) || extractBlock('Pouch ID', text) || extractBlock('Lot Pouch', text);
 
-            // 1. Ekstraksi tanggal mutlak dari Lot ID (misal CV8FJ272F5 -> 27)
             let date = '';
             let matchLotDate = (lotId || '').match(/[A-Z0-9]{4,5}(\d{2})/i);
             if (matchLotDate) {
@@ -992,7 +997,6 @@
                 date = `${y}-${m}-${day}`;
             }
 
-            // Fallback jika Lot ID tidak memiliki pola tanggal
             if (!date) {
                 let rawDate = extractBlock('Date', text) || extractBlock('Tanggal', text);
                 if (!rawDate) {
@@ -1038,6 +1042,69 @@
             return rows.join('\n');
         }
 
+        // 3.C FORMAT CRACK - QA
+        // Format Kolom: [Lompat No]\tDate(MM/DD/YYYY)\tTime\tLine\tLot ID\tPouch Lot\tCount Cleaning cycle\tIssue
+        function formatCrackQA(text) {
+            let lineMatch = text.match(/(?:Line|PKG)\s*[:=–-]?\s*([0-9]+[\.\-_][0-9]+)/i);
+            let line = lineMatch ? lineMatch[1].replace(/[\._]/g, '-') : extractBlock('Line', text).replace(/[\._]/g, '-');
+
+            let lotId = extractBlock('Lot ID', text) || extractBlock('LotID', text) || extractBlock('Lot', text);
+            let pouchLot = extractBlock('Pouch Lot', text) || extractBlock('Pouch ID', text) || extractBlock('Lot Pouch', text);
+
+            // Ekstraksi tanggal acuan dari Lot ID (format MM/DD/YYYY)
+            let date = '';
+            let matchLotDate = (lotId || '').match(/[A-Z0-9]{4,5}(\d{2})/i);
+            if (matchLotDate) {
+                let day = matchLotDate[1];
+                let today = new Date();
+                let y = today.getFullYear();
+                let m = String(today.getMonth() + 1).padStart(2, '0');
+                date = `${m}/${day}/${y}`;
+            }
+
+            if (!date) {
+                let rawDate = extractBlock('Date', text) || extractBlock('Tanggal', text);
+                if (!rawDate) {
+                    let matchDate = text.match(/\b\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}\b/);
+                    if (matchDate) rawDate = matchDate[0];
+                }
+                if (rawDate) {
+                    let iso = formatDateIso(rawDate);
+                    let p = iso.split('-');
+                    date = `${p[1]}/${p[2]}/${p[0]}`;
+                } else {
+                    let today = new Date();
+                    date = `${String(today.getMonth() + 1).padStart(2, '0')}/${String(today.getDate()).padStart(2, '0')}/${today.getFullYear()}`;
+                }
+            }
+
+            let timeRaw = extractBlock('Time', text) || extractBlock('Jam', text) || extractBlock('Waktu', text);
+            let time = '';
+            if (timeRaw) {
+                let matchTime = timeRaw.match(/\b\d{1,2}[.:]\d{2}\b/);
+                if (matchTime) time = matchTime[0].replace('.', ':');
+            }
+
+            let countRaw = extractBlock('Count Cleaning Forming', text) ||
+                           extractBlock('Count Cleaning cycle', text) ||
+                           extractBlock('Count Cleaning', text) ||
+                           extractBlock('Count', text) || 
+                           extractBlock('Qty', text);
+            let count = countRaw ? countRaw.replace(/\./g, '').replace(/[^0-9]/g, '') : '';
+
+            // Klasifikasi Issue: Pinhole atau Crack
+            let issue = 'Crack';
+            let lower = text.toLowerCase();
+            if (lower.includes('pinhole') || lower.includes('pin hole')) {
+                issue = 'Pinhole';
+            } else if (lower.includes('crack')) {
+                issue = 'Crack';
+            }
+
+            // [Lompat No]\tDate\tTime\tLine\tLot ID\tPouch Lot\tCount Cleaning cycle\tIssue
+            return `\t${date}\t${time}\t${line}\t${lotId}\t${pouchLot}\t${count}\t${issue}`;
+        }
+
         // FUNGSI KLASIFIKASI NG NAME (REWORK)
         function matchKlasifikasiNG(fullText, ngRaw) {
             let cleanFull = (fullText || '').replace(/\u00A0/g, ' ');
@@ -1056,7 +1123,6 @@
                 sign = '-';
             }
 
-            // 1. Deteksi Weight Before E/F
             if (
                 ng_lower.includes('before') && (ng_lower.includes('weight') || ng_lower.includes('ef') || ng_lower.includes('e/f')) ||
                 ng_lower.includes('bw') ||
@@ -1065,7 +1131,6 @@
                 return 'Weight Before E/F';
             }
 
-            // 2. Deteksi Weight After E/F
             if (
                 ng_lower.includes('afterweight') || 
                 ng_lower.includes('after weight') || 
@@ -1163,7 +1228,7 @@
             return raw;
         }
 
-        // 4.A FORMAT REWORK NORMAL (WORK DATE BERTINGKAT & PERBAIKAN TAB PIC)
+        // 4.A FORMAT REWORK NORMAL
         function formatRework(fullText) {
             if (!fullText) return '';
 
@@ -1172,7 +1237,6 @@
                 .replace(/\u00A0/g, ' ')
                 .replace(/\r\n/g, '\n');
 
-            // Tetap simpan stempel waktu WA saat split batch agar jam terbaca
             let rawChunks = cleanFull
                 .split(/(?=\[\d{1,2}[.:]\d{2},\s*\d{1,2}\/\d{1,2}\/\d{2,4}\])/g)
                 .map(c => c.trim())
@@ -1210,7 +1274,6 @@
 
                 if (!line) return;
 
-                // 1. Ekstraksi Date & Time untuk Work Date Bertingkat
                 let rawDate = extractBlock('Date', text) || extractBlock('Tanggal', text);
                 if (!rawDate) {
                     let matchDate = text.match(/(?:Rework\s+)?(\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4})/i) ||
@@ -1221,7 +1284,6 @@
                 let timeRaw = extractBlock('Time', text) || extractBlock('Jam', text) || extractBlock('Waktu', text);
                 let date = adjustWorkDate(rawDate, timeRaw, text);
 
-                // 2. Ekstraksi NG Name
                 let ngRaw = extractBlock('NG', text);
                 if (!ngRaw) {
                     let matchNg = text.match(/(?:^|\n)[\s*•_–.-]*NG\s*[:=–-]?\s*(.*)/i);
@@ -1230,7 +1292,6 @@
                     }
                 }
 
-                // Fallback pencarian defect (abaikan section & izinkan karakter >= 2 seperti AW/LC/BW)
                 if (!ngRaw) {
                     let lines = text.split('\n').map(l => l.trim()).filter(Boolean);
                     for (let l of lines) {
@@ -1250,7 +1311,6 @@
 
                 let ngName = matchKlasifikasiNG(text, ngRaw);
 
-                // 3. Section
                 let section = 'TW';
                 let lowerText = text.toLowerCase();
                 let lowerNg = (ngName || '').toLowerCase();
@@ -1346,8 +1406,6 @@
                     let pkgId = (section === 'EL') ? cellId : '';
                     let stkId = (section === 'TW' || section === 'CA') ? cellId : '';
 
-                    // Susunan Kolom Rework (11 kolom pemisah utuh):
-                    // Date \t Line \t Section \t NG Name \t Lot ID \t PKG ID \t STK ID Lama \t Status \t Reason \t Detail Reason \t PIC
                     let row = [
                         date,
                         line,
@@ -1685,7 +1743,13 @@
             } else if (currentMode === 'excel') {
                 output = formatExcel(input);
             } else if (currentMode === 'crack') {
-                output = (crackSubMode === 'image') ? formatVisionNaming(input) : formatCrackExcel(input);
+                if (crackSubMode === 'image') {
+                    output = formatVisionNaming(input);
+                } else if (crackSubMode === 'excel') {
+                    output = formatCrackExcel(input);
+                } else if (crackSubMode === 'qa') {
+                    output = formatCrackQA(input);
+                }
             } else if (currentMode === 'rework') {
                 output = (reworkSubMode === 'barcode') ? formatReworkBarcode(input) : formatRework(input);
             } else if (currentMode === 'top5') {
