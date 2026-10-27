@@ -973,41 +973,33 @@
             return jams.map(j => `${line}_${j}_${lotId}_${pouchLot}_${status}`).join('\n');
         }
 
-        // 3.B FORMAT CRACK - EXCEL
+        // 3.B FORMAT CRACK - EXCEL (ACUAN TANGGAL LANGSUNG DARI LOT ID)
         function formatCrackExcel(text) {
             let lineMatch = text.match(/(?:Line|PKG)\s*[:=–-]?\s*([0-9]+[\.\-_][0-9]+)/i);
             let line = lineMatch ? lineMatch[1].replace(/[\._]/g, '-') : extractBlock('Line', text).replace(/[\._]/g, '-');
 
-            let rawDate = extractBlock('Date', text) || extractBlock('Tanggal', text);
-            if (!rawDate) {
-                let matchDate = text.match(/\b\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}\b/);
-                if (matchDate) rawDate = matchDate[0];
-            }
+            let lotId = extractBlock('Lot ID', text) || extractBlock('LotID', text) || extractBlock('Lot', text);
+            let pouchLot = extractBlock('Pouch Lot', text) || extractBlock('Pouch ID', text) || extractBlock('Lot Pouch', text);
 
+            // 1. Ekstraksi tanggal mutlak dari Lot ID (misal CV8FJ272F5 -> 27)
             let date = '';
-            if (rawDate) {
-                let parts = rawDate.split(/[\/-]/);
-                if (parts.length === 3) {
-                    if (parts[0].length === 4) {
-                        let y = parts[0];
-                        let m = String(parts[1]).padStart(2, '0');
-                        let d = String(parts[2]).padStart(2, '0');
-                        date = `${y}-${m}-${d}`;
-                    } else if (parts[2].length === 4) {
-                        let d = String(parts[0]).padStart(2, '0');
-                        let m = String(parts[1]).padStart(2, '0');
-                        let y = parts[2];
-                        date = `${y}-${m}-${d}`;
-                    }
-                }
-            }
-
-            if (!date) {
+            let matchLotDate = (lotId || '').match(/[A-Z0-9]{4,5}(\d{2})/i);
+            if (matchLotDate) {
+                let day = matchLotDate[1];
                 let today = new Date();
                 let y = today.getFullYear();
                 let m = String(today.getMonth() + 1).padStart(2, '0');
-                let d = String(today.getDate()).padStart(2, '0');
-                date = `${y}-${m}-${d}`;
+                date = `${y}-${m}-${day}`;
+            }
+
+            // Fallback jika Lot ID tidak memiliki pola tanggal
+            if (!date) {
+                let rawDate = extractBlock('Date', text) || extractBlock('Tanggal', text);
+                if (!rawDate) {
+                    let matchDate = text.match(/\b\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}\b/);
+                    if (matchDate) rawDate = matchDate[0];
+                }
+                date = formatDateIso(rawDate);
             }
 
             let timeRaw = extractBlock('Time', text) || extractBlock('Jam', text) || extractBlock('Waktu', text);
@@ -1033,9 +1025,6 @@
                     .map(c => c.trim().replace(/\./g, '').replace(/[^0-9]/g, ''))
                     .filter(c => c.length > 0);
             }
-
-            let lotId = extractBlock('Lot ID', text) || extractBlock('LotID', text) || extractBlock('Lot', text);
-            let pouchLot = extractBlock('Pouch Lot', text) || extractBlock('Pouch ID', text) || extractBlock('Lot Pouch', text);
 
             let maxLen = Math.max(times.length, counts.length, 1);
             let rows = [];
