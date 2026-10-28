@@ -414,41 +414,11 @@
         let top5SubMode = 'normal';
         let warningTimeout = null;
 
-        // Helper format tanggal standar: YYYY-MM-DD
-        function formatDateIso(rawDate) {
-            let d, m, y;
-            if (rawDate) {
-                let cleanDate = rawDate.trim();
-                let parsed = new Date(cleanDate);
-                if (!isNaN(parsed.getTime())) {
-                    let year = parsed.getFullYear();
-                    let month = String(parsed.getMonth() + 1).padStart(2, '0');
-                    let day = String(parsed.getDate()).padStart(2, '0');
-                    return `${year}-${month}-${day}`;
-                }
-                let parts = cleanDate.split(/[\/-]/);
-                if (parts.length === 3) {
-                    if (parts[0].length === 4) {
-                        return `${parts[0]}-${String(parts[1]).padStart(2, '0')}-${String(parts[2]).padStart(2, '0')}`;
-                    } else if (parts[2].length === 4 || parts[2].length === 2) {
-                        y = parseInt(parts[2], 10);
-                        if (y < 100) y += 2000;
-                        m = String(parts[1]).padStart(2, '0');
-                        d = String(parts[0]).padStart(2, '0');
-                        return `${y}-${m}-${d}`;
-                    }
-                }
-            }
-            let today = new Date();
-            let year = today.getFullYear();
-            let month = String(today.getMonth() + 1).padStart(2, '0');
-            let day = String(today.getDate()).padStart(2, '0');
-            return `${year}-${month}-${day}`;
-        }
+        // Parser Komponen Tanggal Mandiri (Mendukung DD/MM/YYYY, ISO, dan Nama Bulan Indo/Inggris)
+        function parseRawDateComponents(rawDate) {
+            if (!rawDate) return null;
+            let clean = rawDate.trim();
 
-       // Helper Work Date (Mendukung nama bulan Indo/Inggris + Penanganan Shift 3)
-        function adjustWorkDate(rawDate, timeStr, fullBlock = '') {
-            let d, m, y;
             const monthMap = {
                 'jan': 0, 'januari': 0, 'january': 0,
                 'feb': 1, 'februari': 1, 'february': 1,
@@ -464,41 +434,69 @@
                 'des': 11, 'desember': 11, 'dec': 11, 'december': 11
             };
 
-            if (rawDate) {
-                let cleanDate = rawDate.trim();
-                
-                // 1. Cek format nama bulan: "28 Oktober 2026"
-                let textMatch = cleanDate.match(/^(\d{1,2})\s+([A-Za-z]+)\s+(\d{2,4})$/);
-                if (textMatch) {
-                    d = parseInt(textMatch[1], 10);
-                    let mName = textMatch[2].toLowerCase();
-                    y = parseInt(textMatch[3], 10);
-                    if (y < 100) y += 2000;
-                    if (monthMap[mName] !== undefined) {
-                        m = monthMap[mName];
-                    }
-                } else {
-                    // 2. Cek format angka: "28/10/2026" atau "2026-10-28"
-                    let parts = cleanDate.split(/[\/-]/);
-                    if (parts.length === 3) {
-                        if (parts[0].length === 4) {
-                            y = parseInt(parts[0], 10);
-                            m = parseInt(parts[1], 10) - 1;
-                            d = parseInt(parts[2], 10);
-                        } else if (parts[2].length === 4 || parts[2].length === 2) {
-                            d = parseInt(parts[0], 10);
-                            m = parseInt(parts[1], 10) - 1;
-                            y = parseInt(parts[2], 10);
-                            if (y < 100) y += 2000;
-                        }
-                    }
+            // 1. Cek format nama bulan: "28 Oktober 2026" atau "28-Okt-26"
+            let textMatch = clean.match(/^(\d{1,2})\s+([A-Za-z]+)\s+(\d{2,4})$/);
+            if (textMatch) {
+                let d = parseInt(textMatch[1], 10);
+                let mName = textMatch[2].toLowerCase();
+                let y = parseInt(textMatch[3], 10);
+                if (y < 100) y += 2000;
+                if (monthMap[mName] !== undefined) {
+                    return { y: y, m: monthMap[mName], d: d };
                 }
             }
 
-            // Jika valid, pakai tanggal dari teks. Jika tidak, pakai hari ini
-            let dateObj = (d !== undefined && !isNaN(d) && m !== undefined && !isNaN(m) && y !== undefined && !isNaN(y)) 
-                ? new Date(y, m, d) 
-                : new Date();
+            // 2. Cek format angka dengan pemisah / atau - (misal: "28/10/2026" atau "2026-10-28")
+            let parts = clean.split(/[\/-]/);
+            if (parts.length === 3) {
+                if (parts[0].length === 4) {
+                    return { y: parseInt(parts[0], 10), m: parseInt(parts[1], 10) - 1, d: parseInt(parts[2], 10) };
+                } else if (parts[2].length === 4 || parts[2].length === 2) {
+                    let y = parseInt(parts[2], 10);
+                    if (y < 100) y += 2000;
+                    return { y: y, m: parseInt(parts[1], 10) - 1, d: parseInt(parts[0], 10) };
+                }
+            }
+
+            // 3. Fallback standard Date parsing
+            let dObj = new Date(clean);
+            if (!isNaN(dObj.getTime())) {
+                return { y: dObj.getFullYear(), m: dObj.getMonth(), d: dObj.getDate() };
+            }
+
+            return null;
+        }
+
+        // Helper format tanggal standar: YYYY-MM-DD
+        function formatDateIso(rawDate) {
+            let parsed = parseRawDateComponents(rawDate);
+            let dateObj = parsed ? new Date(parsed.y, parsed.m, parsed.d) : new Date();
+            let year = dateObj.getFullYear();
+            let month = String(dateObj.getMonth() + 1).padStart(2, '0');
+            let day = String(dateObj.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        // Helper Work Date (Cut-off 06:00 dengan validasi Shift & Jam)
+        function adjustWorkDate(rawDate, timeStr, fullBlock = '') {
+            let parsed = parseRawDateComponents(rawDate);
+            let dateObj = parsed ? new Date(parsed.y, parsed.m, parsed.d) : new Date();
+
+            let hour = null;
+            let matchHour = (timeStr || '').match(/\b(\d{1,2})[.:]\d{2}\b/);
+            if (matchHour) {
+                hour = parseInt(matchHour[1], 10);
+            } else if (fullBlock) {
+                let waMatch = fullBlock.match(/\[(\d{1,2})[.:]\d{2}/);
+                if (waMatch) {
+                    hour = parseInt(waMatch[1], 10);
+                }
+            }
+
+            let isShift3 = /shift\s*3\b/i.test(fullBlock);
+            if (hour !== null && hour < 6 && isShift3) {
+                dateObj.setDate(dateObj.getDate() - 1);
+            }
 
             let outY = dateObj.getFullYear();
             let outM = String(dateObj.getMonth() + 1).padStart(2, '0');
@@ -509,30 +507,12 @@
         // Helper format tanggal Barcode: D-Mmm-YY (misal: 22-Oct-26)
         function formatDateBarcode(rawDate) {
             const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-            let d, m, y;
+            let parsed = parseRawDateComponents(rawDate);
+            let dateObj = parsed ? new Date(parsed.y, parsed.m, parsed.d) : new Date();
 
-            if (rawDate) {
-                let parts = rawDate.split(/[\/-]/);
-                if (parts.length === 3) {
-                    if (parts[0].length === 4) {
-                        y = parseInt(parts[0], 10);
-                        m = parseInt(parts[1], 10) - 1;
-                        d = parseInt(parts[2], 10);
-                    } else if (parts[2].length === 4 || parts[2].length === 2) {
-                        d = parseInt(parts[0], 10);
-                        m = parseInt(parts[1], 10) - 1;
-                        y = parseInt(parts[2], 10);
-                        if (y < 100) y += 2000;
-                    }
-                }
-            }
-
-            if (!d || isNaN(d) || isNaN(m) || isNaN(y)) {
-                let today = new Date();
-                d = today.getDate();
-                m = today.getMonth();
-                y = today.getFullYear();
-            }
+            let d = dateObj.getDate();
+            let m = dateObj.getMonth();
+            let y = dateObj.getFullYear();
 
             let shortYear = String(y).slice(-2);
             let monthName = months[m] || 'Jan';
@@ -903,8 +883,8 @@
 
                 let rawDate = extractBlock('Date', text) || extractBlock('Tanggal', text);
                 if (!rawDate) {
-                    let matchDate = text.match(/\b\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}\b/) ||
-                                    text.match(/\b\d{1,2}\s+[A-Za-z]+\s+\d{2,4}\b/);
+                    let matchDate = text.match(/\b\d{1,2}\s+[A-Za-z]+\s+\d{2,4}\b/) ||
+                                    text.match(/\b\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}\b/);
                     if (matchDate) rawDate = matchDate[0];
                 }
 
@@ -994,7 +974,7 @@
             return jams.map(j => `${line}_${j}_${lotId}_${pouchLot}_${status}`).join('\n');
         }
 
-      // 3.B FORMAT CRACK - EXCEL
+        // 3.B FORMAT CRACK - EXCEL
         function formatCrackExcel(text) {
             let lineMatch = text.match(/(?:Line|PKG)\s*[:=–-]?\s*([0-9]+[\.\-_][0-9]+)/i);
             let line = lineMatch ? lineMatch[1].replace(/[\._]/g, '-') : extractBlock('Line', text).replace(/[\._]/g, '-');
@@ -1015,7 +995,8 @@
             if (!date) {
                 let rawDate = extractBlock('Date', text) || extractBlock('Tanggal', text);
                 if (!rawDate) {
-                    let matchDate = text.match(/\b\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}\b/);
+                    let matchDate = text.match(/\b\d{1,2}\s+[A-Za-z]+\s+\d{2,4}\b/) ||
+                                    text.match(/\b\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}\b/);
                     if (matchDate) rawDate = matchDate[0];
                 }
                 date = formatDateIso(rawDate);
@@ -1057,8 +1038,7 @@
             return rows.join('\n');
         }
 
-      // 3.C FORMAT CRACK - QA
-        // Format Kolom: [Auto No (+1)]\tDate(YYYY-MM-DD)\tTime\tLine\tLot ID\tPouch Lot\tCount Cleaning cycle\tIssue
+        // 3.C FORMAT CRACK - QA
         function formatCrackQA(text) {
             let lineMatch = text.match(/(?:Line|PKG)\s*[:=–-]?\s*([0-9]+[\.\-_][0-9]+)/i);
             let line = lineMatch ? lineMatch[1].replace(/[\._]/g, '-') : extractBlock('Line', text).replace(/[\._]/g, '-');
@@ -1066,7 +1046,6 @@
             let lotId = extractBlock('Lot ID', text) || extractBlock('LotID', text) || extractBlock('Lot', text);
             let pouchLot = extractBlock('Pouch Lot', text) || extractBlock('Pouch ID', text) || extractBlock('Lot Pouch', text);
 
-            // Ekstraksi tanggal acuan dari 2 digit tanggal di Lot ID (YYYY-MM-DD)
             let date = '';
             let matchLotDate = (lotId || '').match(/[A-Z0-9]{4,5}(\d{2})/i);
             if (matchLotDate) {
@@ -1080,7 +1059,8 @@
             if (!date) {
                 let rawDate = extractBlock('Date', text) || extractBlock('Tanggal', text);
                 if (!rawDate) {
-                    let matchDate = text.match(/\b\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}\b/);
+                    let matchDate = text.match(/\b\d{1,2}\s+[A-Za-z]+\s+\d{2,4}\b/) ||
+                                    text.match(/\b\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}\b/);
                     if (matchDate) rawDate = matchDate[0];
                 }
                 date = formatDateIso(rawDate);
@@ -1100,7 +1080,6 @@
                            extractBlock('Qty', text);
             let count = countRaw ? countRaw.replace(/\./g, '').replace(/[^0-9]/g, '') : '';
 
-            // Klasifikasi Issue: Pinhole atau Crack
             let issue = 'Crack';
             let lower = text.toLowerCase();
             if (lower.includes('pinhole') || lower.includes('pin hole')) {
@@ -1109,7 +1088,6 @@
                 issue = 'Crack';
             }
 
-            // Rumus Excel otomatis nomor sel atas + 1
             const autoFormulaNo = '=OFFSET(INDIRECT(ADDRESS(ROW(),COLUMN())),-1,0)+1';
 
             return `${autoFormulaNo}\t${date}\t${time}\t${line}\t${lotId}\t${pouchLot}\t${count}\t${issue}`;
@@ -1247,6 +1225,9 @@
                 .replace(/\u00A0/g, ' ')
                 .replace(/\r\n/g, '\n');
 
+            // Hapus header pesan WhatsApp stempel waktu
+            cleanFull = cleanFull.replace(/\[\d{1,2}[.:]\d{2},\s*\d{1,2}\/\d{1,2}\/\d{2,4}\]\s*[^:\n]+:\s*/g, '\n');
+
             let rawChunks = cleanFull
                 .split(/(?=\[\d{1,2}[.:]\d{2},\s*\d{1,2}\/\d{1,2}\/\d{2,4}\])/g)
                 .map(c => c.trim())
@@ -1259,8 +1240,8 @@
                 let subBlocks = [];
                 if (/Rework\s+\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}/i.test(chunk)) {
                     subBlocks = chunk.split(/(?=(?:^|\n)\s*Rework\s+\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4})/i);
-                } else if (/\[(?:Rework\vert{}Problem Report)\]/i.test(chunk)) {
-                    subBlocks = chunk.split(/(?=\[(?:Rework\vert{}Problem Report)\])/i);
+                } else if (/\[(?:Rework|Problem Report)\]/i.test(chunk)) {
+                    subBlocks = chunk.split(/(?=\[(?:Rework|Problem Report)\])/i);
                 } else {
                     subBlocks = chunk.split(/(?=(?:^|\n)\s*(?:#\s*PKG|PKG\s*\d+-\d+|Line\s*[:=–-]|#(?:[0-9]+-[0-9]+)))/i);
                 }
@@ -1284,15 +1265,21 @@
 
                 if (!line) return;
 
-                let rawDate = extractBlock('Date', text) || extractBlock('Tanggal', text);
-                if (!rawDate) {
-                    let matchDate = text.match(/(?:Rework\s+)?(\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4})/i) ||
-                                    text.match(/\b\d{1,2}\s+[A-Za-z]+\s+\d{2,4}\b/);
-                    if (matchDate) rawDate = matchDate[1] || matchDate[0];
+                // Prioritaskan tanggal setelah kata Rework
+                let rawDate = '';
+                let matchReworkDate = text.match(/Rework\s+(\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4})/i);
+                if (matchReworkDate) {
+                    rawDate = matchReworkDate[1];
+                } else {
+                    rawDate = extractBlock('Date', text) || extractBlock('Tanggal', text);
+                    if (!rawDate) {
+                        let matchDate = text.match(/\b\d{1,2}\s+[A-Za-z]+\s+\d{2,4}\b/) ||
+                                        text.match(/\b\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}\b/);
+                        if (matchDate) rawDate = matchDate[0];
+                    }
                 }
 
-                let timeRaw = extractBlock('Time', text) || extractBlock('Jam', text) || extractBlock('Waktu', text);
-                let date = adjustWorkDate(rawDate, timeRaw, text);
+                let date = formatDateIso(rawDate);
 
                 let ngRaw = extractBlock('NG', text);
                 if (!ngRaw) {
@@ -1371,7 +1358,7 @@
                             let parts = cleaned.split(/[,;\s/&]+|\b(?:dan|and)\b/i);
                             parts.forEach(p => {
                                 let id = p.trim().replace(/^[^\w]+|[^\w]+$/g, '');
-                                if (id && !/^\d+$/.test(id) && !/^(?:ea\vert{}pcs\vert{}pc\vert{}total\vert{}ok\vert{}ng\vert{}cell\vert{}id)$/i.test(id)) {
+                                if (id && !/^\d+$/.test(id) && !/^(?:ea|pcs|pc|total|ok|ng|cell|id)$/i.test(id)) {
                                     cellIds.push(id);
                                 }
                             });
@@ -1443,164 +1430,172 @@
             return allResults.join('\n');
         }
 
-        // 4.B FORMAT REWORK BARCODE (Qty dihitung berdasarkan jumlah Cell ID)
-function formatReworkBarcode(fullText) {
-    if (!fullText) return '';
+        // 4.B FORMAT REWORK BARCODE
+        function formatReworkBarcode(fullText) {
+            if (!fullText) return '';
 
-    let cleanFull = fullText
-        .replace(/[\u200B-\u200D\uFEFF]/g, '')
-        .replace(/\u00A0/g, ' ')
-        .replace(/\r\n/g, '\n');
+            let cleanFull = fullText
+                .replace(/[\u200B-\u200D\uFEFF]/g, '')
+                .replace(/\u00A0/g, ' ')
+                .replace(/\r\n/g, '\n');
 
-    let rawChunks = cleanFull
-        .split(/(?=\[\d{1,2}[.:]\d{2},\s*\d{1,2}\/\d{1,2}\/\d{2,4}\])/g)
-        .map(c => c.trim())
-        .filter(c => c.length > 0);
+            // Hapus header WhatsApp
+            cleanFull = cleanFull.replace(/\[\d{1,2}[.:]\d{2},\s*\d{1,2}\/\d{1,2}\/\d{2,4}\]\s*[^:\n]+:\s*/g, '\n');
 
-    if (rawChunks.length === 0) rawChunks = [cleanFull];
+            let rawChunks = cleanFull
+                .split(/(?=\[\d{1,2}[.:]\d{2},\s*\d{1,2}\/\d{1,2}\/\d{2,4}\])/g)
+                .map(c => c.trim())
+                .filter(c => c.length > 0);
 
-    let blocks = [];
-    rawChunks.forEach(chunk => {
-        let subBlocks = [];
-        if (/Rework\s+\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}/i.test(chunk)) {
-            subBlocks = chunk.split(/(?=(?:^|\n)\s*Rework\s+\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4})/i);
-        } else if (/\[(?:Rework|Problem Report)\]/i.test(chunk)) {
-            subBlocks = chunk.split(/(?=\[(?:Rework|Problem Report)\])/i);
-        } else {
-            subBlocks = chunk.split(/(?=(?:^|\n)\s*(?:#\s*PKG|PKG\s*\d+-\d+|Line\s*[:=–-]|#(?:[0-9]+-[0-9]+)))/i);
-        }
+            if (rawChunks.length === 0) rawChunks = [cleanFull];
 
-        subBlocks.forEach(sb => {
-            let trimmed = sb.trim();
-            if (trimmed.length > 0) {
-                blocks.push(trimmed);
-            }
-        });
-    });
+            let blocks = [];
+            rawChunks.forEach(chunk => {
+                let subBlocks = [];
+                if (/Rework\s+\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}/i.test(chunk)) {
+                    subBlocks = chunk.split(/(?=(?:^|\n)\s*Rework\s+\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4})/i);
+                } else if (/\[(?:Rework|Problem Report)\]/i.test(chunk)) {
+                    subBlocks = chunk.split(/(?=\[(?:Rework|Problem Report)\])/i);
+                } else {
+                    subBlocks = chunk.split(/(?=(?:^|\n)\s*(?:#\s*PKG|PKG\s*\d+-\d+|Line\s*[:=–-]|#(?:[0-9]+-[0-9]+)))/i);
+                }
 
-    if (blocks.length === 0) blocks = [cleanFull];
+                subBlocks.forEach(sb => {
+                    let trimmed = sb.trim();
+                    if (trimmed.length > 0) {
+                        blocks.push(trimmed);
+                    }
+                });
+            });
 
-    let allResults = [];
+            if (blocks.length === 0) blocks = [cleanFull];
 
-    blocks.forEach(text => {
-        let lineMatch = text.match(/(?:^|\n)\s*(?:#\s*PKG|Line\s*[:=–-]\s*PKG|Line\s*[:=–-]|PKG|#)?\s*([0-9]+-[0-9]+)/i);
-        let line = lineMatch ? `="${lineMatch[1]}"` : '';
-        if (!line) return;
+            let allResults = [];
 
-        let rawDate = extractBlock('Date', text) || extractBlock('Tanggal', text);
-        if (!rawDate) {
-            let matchDate = text.match(/(?:Rework\s+)?(\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4})/i) ||
-                            text.match(/\b\d{1,2}\s+[A-Za-z]+\s+\d{2,4}\b/);
-            if (matchDate) rawDate = matchDate[1] || matchDate[0];
-        }
-        let date = formatDateIso(rawDate);
+            blocks.forEach(text => {
+                let lineMatch = text.match(/(?:^|\n)\s*(?:#\s*PKG|Line\s*[:=–-]\s*PKG|Line\s*[:=–-]|PKG|#)?\s*([0-9]+-[0-9]+)/i);
+                let line = lineMatch ? `="${lineMatch[1]}"` : '';
+                if (!line) return;
 
-        let timeRaw = extractBlock('Time', text) || extractBlock('Jam', text) || extractBlock('Waktu', text);
-        let time = '';
-        if (timeRaw) {
-            let matchTime = timeRaw.match(/\b\d{1,2}[.:]\d{2}\b/);
-            if (matchTime) time = matchTime[0].replace('.', ':');
-        }
+                let rawDate = '';
+                let matchReworkDate = text.match(/Rework\s+(\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4})/i);
+                if (matchReworkDate) {
+                    rawDate = matchReworkDate[1];
+                } else {
+                    rawDate = extractBlock('Date', text) || extractBlock('Tanggal', text);
+                    if (!rawDate) {
+                        let matchDate = text.match(/\b\d{1,2}\s+[A-Za-z]+\s+\d{2,4}\b/) ||
+                                        text.match(/\b\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}\b/);
+                        if (matchDate) rawDate = matchDate[0];
+                    }
+                }
+                let date = formatDateIso(rawDate);
 
-        let shiftRaw = extractBlock('Shift', text);
-        let shiftNum = '';
-        if (shiftRaw) {
-            let matchShift = shiftRaw.match(/\d+/);
-            if (matchShift) shiftNum = matchShift[0];
-        }
-        if (!shiftNum) {
-            let matchShiftInText = text.match(/\bShift\s*([0-9]+)\b/i);
-            if (matchShiftInText) shiftNum = matchShiftInText[1];
-        }
+                let timeRaw = extractBlock('Time', text) || extractBlock('Jam', text) || extractBlock('Waktu', text);
+                let time = '';
+                if (timeRaw) {
+                    let matchTime = timeRaw.match(/\b\d{1,2}[.:]\d{2}\b/);
+                    if (matchTime) time = matchTime[0].replace('.', ':');
+                }
 
-        let shift = '';
-        if (shiftNum === '1') shift = 'A';
-        else if (shiftNum === '2') shift = 'B';
-        else if (shiftNum === '3') shift = 'C';
-        else if (shiftRaw) shift = cleanText(shiftRaw);
+                let shiftRaw = extractBlock('Shift', text);
+                let shiftNum = '';
+                if (shiftRaw) {
+                    let matchShift = shiftRaw.match(/\d+/);
+                    if (matchShift) shiftNum = matchShift[0];
+                }
+                if (!shiftNum) {
+                    let matchShiftInText = text.match(/\bShift\s*([0-9]+)\b/i);
+                    if (matchShiftInText) shiftNum = matchShiftInText[1];
+                }
 
-        let lotId = extractBlock('Lot ID', text) || extractBlock('LotID', text) || extractBlock('Lot', text) || '';
+                let shift = '';
+                if (shiftNum === '1') shift = 'A';
+                else if (shiftNum === '2') shift = 'B';
+                else if (shiftNum === '3') shift = 'C';
+                else if (shiftRaw) shift = cleanText(shiftRaw);
 
-        let side = '';
-        let matchSide = text.match(/Side\s*([A-Za-z0-9\/\-]+)/i);
-        if (matchSide) {
-            side = matchSide[1].toUpperCase();
-        } else {
-            if (/\(AB\)/i.test(text) || /\bAB\b/i.test(text)) side = 'AB';
-            else if (/\bSide A\b/i.test(text)) side = 'A';
-            else if (/\bSide B\b/i.test(text)) side = 'B';
-        }
+                let lotId = extractBlock('Lot ID', text) || extractBlock('LotID', text) || extractBlock('Lot', text) || '';
 
-        // Hitung Cell ID (mendukung format list angka berpoin, koma, spasi, atau baris baru)
-        let cellIds = [];
-        let matchCellBlock = text.match(/(?:^|\n)[\s*•_–.-]*Cell\s*[-_]?\s*ID\s*[:=–-]?\s*([\s\S]*?)(?=\s*(?:\n[\s*•_–.-]*(?:total|status|pic|cc|note|shift|ng|section|reason|lot\s*id|action|ink)\b|$))/i);
+                let side = '';
+                let matchSide = text.match(/Side\s*([A-Za-z0-9\/\-]+)/i);
+                if (matchSide) {
+                    side = matchSide[1].toUpperCase();
+                } else {
+                    if (/\(AB\)/i.test(text) || /\bAB\b/i.test(text)) side = 'AB';
+                    else if (/\bSide A\b/i.test(text)) side = 'A';
+                    else if (/\bSide B\b/i.test(text)) side = 'B';
+                }
 
-        if (matchCellBlock && matchCellBlock[1].trim()) {
-            let rawCellText = matchCellBlock[1].trim();
-            let rawLines = rawCellText.split('\n');
+                // Kalkulasi Qty Berdasarkan Cell ID
+                let cellIds = [];
+                let matchCellBlock = text.match(/(?:^|\n)[\s*•_–.-]*Cell\s*[-_]?\s*ID\s*[:=–-]?\s*([\s\S]*?)(?=\s*(?:\n[\s*•_–.-]*(?:total|status|pic|cc|note|shift|ng|section|reason|lot\s*id|action|ink)\b|$))/i);
 
-            rawLines.forEach(l => {
-                let cleaned = l.replace(/^[•\s*_\-–]+/, '')
-                               .replace(/^\d+[\.\)]\s*/, '')
-                               .trim();
+                if (matchCellBlock && matchCellBlock[1].trim()) {
+                    let rawCellText = matchCellBlock[1].trim();
+                    let rawLines = rawCellText.split('\n');
 
-                if (cleaned && !/^(?:total|status|pic|cc|note|shift|ng|section|reason|lot\s*id|action|ink)\b/i.test(cleaned)) {
-                    let parts = cleaned.split(/[,;\s/&]+|\b(?:dan|and)\b/i);
-                    parts.forEach(p => {
-                        let id = p.trim().replace(/^[^\w]+|[^\w]+$/g, '');
-                        if (id && !/^\d+$/.test(id) && !/^(?:ea|pcs|pc|total|ok|ng|cell|id)$/i.test(id)) {
-                            cellIds.push(id);
+                    rawLines.forEach(l => {
+                        let cleaned = l.replace(/^[•\s*_\-–]+/, '')
+                                       .replace(/^\d+[\.\)]\s*/, '')
+                                       .trim();
+
+                        if (cleaned && !/^(?:total|status|pic|cc|note|shift|ng|section|reason|lot\s*id|action|ink)\b/i.test(cleaned)) {
+                            let parts = cleaned.split(/[,;\s/&]+|\b(?:dan|and)\b/i);
+                            parts.forEach(p => {
+                                let id = p.trim().replace(/^[^\w]+|[^\w]+$/g, '');
+                                if (id && !/^\d+$/.test(id) && !/^(?:ea|pcs|pc|total|ok|ng|cell|id)$/i.test(id)) {
+                                    cellIds.push(id);
+                                }
+                            });
                         }
                     });
                 }
+
+                let qty = cellIds.length;
+                if (qty === 0) {
+                    let qtyRaw = extractBlock('Total', text) || extractBlock('Qty', text) || extractBlock('Count', text);
+                    if (qtyRaw) {
+                        let matchNum = qtyRaw.match(/\d+/);
+                        qty = matchNum ? matchNum[0] : qtyRaw;
+                    }
+                }
+
+                let ngKetika = extractBlock('NG Ketika', text) || extractBlock('Ketika', text);
+                if (/normal/i.test(ngKetika)) {
+                    ngKetika = 'Normal Run';
+                }
+
+                let inkLevel = extractBlock('Ink Level', text) || extractBlock('Ink', text);
+                let category = extractBlock('Category', text) || extractBlock('Kategori', text);
+                let action = extractBlock('Action', text) || extractBlock('Countermeasure', text);
+                let status = 'Closed';
+
+                let picRaw = extractBlock('PIC', text);
+                if (picRaw) picRaw = picRaw.replace(/\([^)]*\)/g, '').trim();
+                let pic = formatPicNames(picRaw);
+
+                let row = [
+                    date,
+                    time,
+                    shift,
+                    line,
+                    lotId,
+                    side,
+                    qty,
+                    ngKetika,
+                    inkLevel,
+                    category,
+                    action,
+                    status,
+                    pic
+                ].map(col => (col || '').toString().replace(/[\r\n]+/g, ' ').trim());
+
+                allResults.push(row.join('\t'));
             });
+
+            return allResults.join('\n');
         }
-
-        // Qty dihitung dari banyaknya Cell ID
-        let qty = cellIds.length;
-        if (qty === 0) {
-            let qtyRaw = extractBlock('Total', text) || extractBlock('Qty', text) || extractBlock('Count', text);
-            if (qtyRaw) {
-                let matchNum = qtyRaw.match(/\d+/);
-                qty = matchNum ? matchNum[0] : qtyRaw;
-            }
-        }
-
-        let ngKetika = extractBlock('NG Ketika', text) || extractBlock('Ketika', text);
-        if (/normal/i.test(ngKetika)) {
-            ngKetika = 'Normal Run';
-        }
-
-        let inkLevel = extractBlock('Ink Level', text) || extractBlock('Ink', text);
-        let category = extractBlock('Category', text) || extractBlock('Kategori', text);
-        let action = extractBlock('Action', text) || extractBlock('Countermeasure', text);
-        let status = 'Closed';
-
-        let picRaw = extractBlock('PIC', text);
-        if (picRaw) picRaw = picRaw.replace(/\([^)]*\)/g, '').trim();
-        let pic = formatPicNames(picRaw);
-
-        let row = [
-            date,
-            time,
-            shift,
-            line,
-            lotId,
-            side,
-            qty,
-            ngKetika,
-            inkLevel,
-            category,
-            action,
-            status,
-            pic
-        ].map(col => (col || '').toString().replace(/[\r\n]+/g, ' ').trim());
-
-        allResults.push(row.join('\t'));
-    });
-
-    return allResults.join('\n');
-}
         
         // 5.A FORMAT TOP 5 NORMAL
         function formatTop5(text) {
@@ -1659,15 +1654,13 @@ function formatReworkBarcode(fullText) {
             return `="${line}"\t${rootCause}\t${safeAdjustment}`;
         }
 
-       // 5.B FORMAT TOP 5 PREWELD (MULAI DARI KOLOM NO DENGAN AUTO FORMULA + 1)
+        // 5.B FORMAT TOP 5 PREWELD
         function formatTop5Preweld(text) {
             if (!text) return '';
 
-            // 1. Line
             let lineMatch = text.match(/(?:Line\s*ID|Line|PKG)\s*[:=–-]?\s*(?:PKG\s*)?([0-9]+-[0-9]+)/i);
             let line = lineMatch ? `="${lineMatch[1]}"` : '';
 
-            // 2. Polarity dari Location: (-) -> Anode, (+) -> Cathode
             let locationRaw = extractBlock('Location', text);
             let polarity = '';
             if (/[-–—]/.test(locationRaw) || /anode/i.test(locationRaw)) {
@@ -1676,15 +1669,14 @@ function formatReworkBarcode(fullText) {
                 polarity = 'Cathode';
             }
 
-            // 3. Issue Date & Date (Format ISO: YYYY-MM-DD)
             let rawDate = extractBlock('Date', text) || extractBlock('Tanggal', text);
             if (!rawDate) {
-                let matchDate = text.match(/\b\d{1,2}\s+[A-Za-z]+\s+\d{4}\b/) || text.match(/\b\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}\b/);
+                let matchDate = text.match(/\b\d{1,2}\s+[A-Za-z]+\s+\d{2,4}\b/) ||
+                                text.match(/\b\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}\b/);
                 if (matchDate) rawDate = matchDate[0];
             }
             let formattedDate = formatDateIso(rawDate);
 
-            // 4. Rootcause
             let rootCause = extractBlock('Cause', text) || extractBlock('Root Cause', text);
             if (!rootCause || rootCause.trim() === '-' || /^action\b/i.test(rootCause.trim())) {
                 rootCause = '-';
@@ -1692,7 +1684,6 @@ function formatReworkBarcode(fullText) {
                 rootCause = capitalizeFirst(rootCause);
             }
 
-            // 5. Qty Defect
             let qtyRaw = extractBlock('Qty Defect Cell', text) || 
                          extractBlock('Qty Defect', text) || 
                          extractBlock('Total', text) || 
@@ -1703,7 +1694,6 @@ function formatReworkBarcode(fullText) {
                 qty = matchNum ? matchNum[0] : qtyRaw.trim();
             }
 
-            // 6. Temp Action
             let rawActions = [];
             let lines = text.split('\n');
             let isAction = false;
@@ -1739,28 +1729,11 @@ function formatReworkBarcode(fullText) {
             let formattedAdjustment = rawActions.map(act => `- ${act}`).join('\n');
             let safeTempAction = formattedAdjustment ? `"${formattedAdjustment.replace(/"/g, '""')}"` : '';
 
-            // 7. PIC
             let picRaw = extractBlock('PIC', text);
             let pic = formatPicNames(picRaw);
 
-            // 8. Formula Excel Otomatis +1 dari nomor baris atas
             const autoFormulaNo = '=OFFSET(INDIRECT(ADDRESS(ROW(),COLUMN())),-1,0)+1';
 
-            // Susunan Kolom (Paste mulai dari sel No paling kiri):
-            // 1. No                     -> autoFormulaNo (+1)
-            // 2. Issue                  -> '' (kosong untuk dropdown manual)
-            // 3. Polarity               -> polarity (Anode / Cathode)
-            // 4. Part Issue             -> '' (kosong)
-            // 5. Line                   -> line
-            // 6. Issue Date             -> formattedDate
-            // 7. Rootcause              -> rootCause
-            // 8. Detection              -> '' (kosong)
-            // 9. [Kolom Hide]           -> '' (kosong)
-            // 10. Counting Part         -> '' (kosong)
-            // 11. QTY Defect            -> qty
-            // 12. Temp Action           -> safeTempAction
-            // 13. PIC                   -> pic
-            // 14. Date                  -> formattedDate
             let row = [
                 autoFormulaNo,
                 '',
@@ -1825,29 +1798,29 @@ function formatReworkBarcode(fullText) {
             }
         }
 
-        function copyOutput() {
+        async function copyOutput() {
             const outputEl = document.getElementById('outputText');
             let textToCopy = outputEl ? outputEl.value.replace(/^[\r\n]+|[\r\n]+$/g, '') : '';
 
             if (!textToCopy) return;
 
             outputEl.select();
-            if (navigator.clipboard && window.isSecureContext) {
-                navigator.clipboard.writeText(textToCopy).then(() => {
-                    showToast();
-                }).catch(() => {
+            try {
+                if (navigator.clipboard && window.isSecureContext) {
+                    await navigator.clipboard.writeText(textToCopy);
+                } else {
                     document.execCommand('copy');
-                    showToast();
-                });
-            } else {
+                }
+                showToast();
+            } catch (err) {
                 document.execCommand('copy');
                 showToast();
             }
         }
 
-        function processBoth() {
+        async function processBoth() {
             processConvert();
-            copyOutput();
+            await copyOutput();
         }
 
         function autoDetectMode(text) {
