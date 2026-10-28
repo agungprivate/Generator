@@ -1428,137 +1428,164 @@
             return allResults.join('\n');
         }
 
-        // 4.B FORMAT REWORK BARCODE
-        function formatReworkBarcode(fullText) {
-            if (!fullText) return '';
+        // 4.B FORMAT REWORK BARCODE (Qty dihitung berdasarkan jumlah Cell ID)
+function formatReworkBarcode(fullText) {
+    if (!fullText) return '';
 
-            let cleanFull = fullText
-                .replace(/[\u200B-\u200D\uFEFF]/g, '')
-                .replace(/\u00A0/g, ' ')
-                .replace(/\r\n/g, '\n');
+    let cleanFull = fullText
+        .replace(/[\u200B-\u200D\uFEFF]/g, '')
+        .replace(/\u00A0/g, ' ')
+        .replace(/\r\n/g, '\n');
 
-            let rawChunks = cleanFull
-                .split(/(?=\[\d{1,2}[.:]\d{2},\s*\d{1,2}\/\d{1,2}\/\d{2,4}\])/g)
-                .map(c => c.trim())
-                .filter(c => c.length > 0);
+    let rawChunks = cleanFull
+        .split(/(?=\[\d{1,2}[.:]\d{2},\s*\d{1,2}\/\d{1,2}\/\d{2,4}\])/g)
+        .map(c => c.trim())
+        .filter(c => c.length > 0);
 
-            if (rawChunks.length === 0) rawChunks = [cleanFull];
+    if (rawChunks.length === 0) rawChunks = [cleanFull];
 
-            let blocks = [];
-            rawChunks.forEach(chunk => {
-                let subBlocks = [];
-                if (/Rework\s+\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}/i.test(chunk)) {
-                    subBlocks = chunk.split(/(?=(?:^|\n)\s*Rework\s+\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4})/i);
-                } else if (/\[(?:Rework\vert{}Problem Report)\]/i.test(chunk)) {
-                    subBlocks = chunk.split(/(?=\[(?:Rework\vert{}Problem Report)\])/i);
-                } else {
-                    subBlocks = chunk.split(/(?=(?:^|\n)\s*(?:#\s*PKG|PKG\s*\d+-\d+|Line\s*[:=–-]|#(?:[0-9]+-[0-9]+)))/i);
-                }
-
-                subBlocks.forEach(sb => {
-                    let trimmed = sb.trim();
-                    if (trimmed.length > 0) {
-                        blocks.push(trimmed);
-                    }
-                });
-            });
-
-            if (blocks.length === 0) blocks = [cleanFull];
-
-            let allResults = [];
-
-            blocks.forEach(text => {
-                let lineMatch = text.match(/(?:^|\n)\s*(?:#\s*PKG|Line\s*[:=–-]\s*PKG|Line\s*[:=–-]|PKG|#)?\s*([0-9]+-[0-9]+)/i);
-                let line = lineMatch ? `="${lineMatch[1]}"` : '';
-                if (!line) return;
-
-                // Tanggal diseragamkan ke YYYY-MM-DD
-                let rawDate = extractBlock('Date', text) || extractBlock('Tanggal', text);
-                if (!rawDate) {
-                    let matchDate = text.match(/(?:Rework\s+)?(\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4})/i) ||
-                                    text.match(/\b\d{1,2}\s+[A-Za-z]+\s+\d{2,4}\b/);
-                    if (matchDate) rawDate = matchDate[1] || matchDate[0];
-                }
-                let date = formatDateIso(rawDate);
-
-                let timeRaw = extractBlock('Time', text) || extractBlock('Jam', text) || extractBlock('Waktu', text);
-                let time = '';
-                if (timeRaw) {
-                    let matchTime = timeRaw.match(/\b\d{1,2}[.:]\d{2}\b/);
-                    if (matchTime) time = matchTime[0].replace('.', ':');
-                }
-
-                let shiftRaw = extractBlock('Shift', text);
-                let shiftNum = '';
-                if (shiftRaw) {
-                    let matchShift = shiftRaw.match(/\d+/);
-                    if (matchShift) shiftNum = matchShift[0];
-                }
-                if (!shiftNum) {
-                    let matchShiftInText = text.match(/\bShift\s*([0-9]+)\b/i);
-                    if (matchShiftInText) shiftNum = matchShiftInText[1];
-                }
-
-                let shift = '';
-                if (shiftNum === '1') shift = 'A';
-                else if (shiftNum === '2') shift = 'B';
-                else if (shiftNum === '3') shift = 'C';
-                else if (shiftRaw) shift = cleanText(shiftRaw);
-
-                let lotId = extractBlock('Lot ID', text) || extractBlock('LotID', text) || extractBlock('Lot', text) || '';
-
-                let side = '';
-                let matchSide = text.match(/Side\s*([A-Za-z0-9\/\-]+)/i);
-                if (matchSide) {
-                    side = matchSide[1].toUpperCase();
-                } else {
-                    if (/\(AB\)/i.test(text) || /\bAB\b/i.test(text)) side = 'AB';
-                    else if (/\bSide A\b/i.test(text)) side = 'A';
-                    else if (/\bSide B\b/i.test(text)) side = 'B';
-                }
-
-                let qtyRaw = extractBlock('Total', text) || extractBlock('Qty', text) || extractBlock('Count', text);
-                let qty = '';
-                if (qtyRaw) {
-                    let matchNum = qtyRaw.match(/\d+/);
-                    qty = matchNum ? matchNum[0] : qtyRaw;
-                }
-
-                let ngKetika = extractBlock('NG Ketika', text) || extractBlock('Ketika', text);
-                if (/normal/i.test(ngKetika)) {
-                    ngKetika = 'Normal Run';
-                }
-
-                let inkLevel = extractBlock('Ink Level', text) || extractBlock('Ink', text);
-                let category = extractBlock('Category', text) || extractBlock('Kategori', text);
-                let action = extractBlock('Action', text) || extractBlock('Countermeasure', text);
-                let status = 'Closed';
-
-                let picRaw = extractBlock('PIC', text);
-                if (picRaw) picRaw = picRaw.replace(/\([^)]*\)/g, '').trim();
-                let pic = formatPicNames(picRaw);
-
-                let row = [
-                    date,
-                    time,
-                    shift,
-                    line,
-                    lotId,
-                    side,
-                    qty,
-                    ngKetika,
-                    inkLevel,
-                    category,
-                    action,
-                    status,
-                    pic
-                ].map(col => (col || '').toString().replace(/[\r\n]+/g, ' ').trim());
-
-                allResults.push(row.join('\t'));
-            });
-
-            return allResults.join('\n');
+    let blocks = [];
+    rawChunks.forEach(chunk => {
+        let subBlocks = [];
+        if (/Rework\s+\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}/i.test(chunk)) {
+            subBlocks = chunk.split(/(?=(?:^|\n)\s*Rework\s+\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4})/i);
+        } else if (/\[(?:Rework|Problem Report)\]/i.test(chunk)) {
+            subBlocks = chunk.split(/(?=\[(?:Rework|Problem Report)\])/i);
+        } else {
+            subBlocks = chunk.split(/(?=(?:^|\n)\s*(?:#\s*PKG|PKG\s*\d+-\d+|Line\s*[:=–-]|#(?:[0-9]+-[0-9]+)))/i);
         }
+
+        subBlocks.forEach(sb => {
+            let trimmed = sb.trim();
+            if (trimmed.length > 0) {
+                blocks.push(trimmed);
+            }
+        });
+    });
+
+    if (blocks.length === 0) blocks = [cleanFull];
+
+    let allResults = [];
+
+    blocks.forEach(text => {
+        let lineMatch = text.match(/(?:^|\n)\s*(?:#\s*PKG|Line\s*[:=–-]\s*PKG|Line\s*[:=–-]|PKG|#)?\s*([0-9]+-[0-9]+)/i);
+        let line = lineMatch ? `="${lineMatch[1]}"` : '';
+        if (!line) return;
+
+        let rawDate = extractBlock('Date', text) || extractBlock('Tanggal', text);
+        if (!rawDate) {
+            let matchDate = text.match(/(?:Rework\s+)?(\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4})/i) ||
+                            text.match(/\b\d{1,2}\s+[A-Za-z]+\s+\d{2,4}\b/);
+            if (matchDate) rawDate = matchDate[1] || matchDate[0];
+        }
+        let date = formatDateIso(rawDate);
+
+        let timeRaw = extractBlock('Time', text) || extractBlock('Jam', text) || extractBlock('Waktu', text);
+        let time = '';
+        if (timeRaw) {
+            let matchTime = timeRaw.match(/\b\d{1,2}[.:]\d{2}\b/);
+            if (matchTime) time = matchTime[0].replace('.', ':');
+        }
+
+        let shiftRaw = extractBlock('Shift', text);
+        let shiftNum = '';
+        if (shiftRaw) {
+            let matchShift = shiftRaw.match(/\d+/);
+            if (matchShift) shiftNum = matchShift[0];
+        }
+        if (!shiftNum) {
+            let matchShiftInText = text.match(/\bShift\s*([0-9]+)\b/i);
+            if (matchShiftInText) shiftNum = matchShiftInText[1];
+        }
+
+        let shift = '';
+        if (shiftNum === '1') shift = 'A';
+        else if (shiftNum === '2') shift = 'B';
+        else if (shiftNum === '3') shift = 'C';
+        else if (shiftRaw) shift = cleanText(shiftRaw);
+
+        let lotId = extractBlock('Lot ID', text) || extractBlock('LotID', text) || extractBlock('Lot', text) || '';
+
+        let side = '';
+        let matchSide = text.match(/Side\s*([A-Za-z0-9\/\-]+)/i);
+        if (matchSide) {
+            side = matchSide[1].toUpperCase();
+        } else {
+            if (/\(AB\)/i.test(text) || /\bAB\b/i.test(text)) side = 'AB';
+            else if (/\bSide A\b/i.test(text)) side = 'A';
+            else if (/\bSide B\b/i.test(text)) side = 'B';
+        }
+
+        // Hitung Cell ID (mendukung format list angka berpoin, koma, spasi, atau baris baru)
+        let cellIds = [];
+        let matchCellBlock = text.match(/(?:^|\n)[\s*•_–.-]*Cell\s*[-_]?\s*ID\s*[:=–-]?\s*([\s\S]*?)(?=\s*(?:\n[\s*•_–.-]*(?:total|status|pic|cc|note|shift|ng|section|reason|lot\s*id|action|ink)\b|$))/i);
+
+        if (matchCellBlock && matchCellBlock[1].trim()) {
+            let rawCellText = matchCellBlock[1].trim();
+            let rawLines = rawCellText.split('\n');
+
+            rawLines.forEach(l => {
+                let cleaned = l.replace(/^[•\s*_\-–]+/, '')
+                               .replace(/^\d+[\.\)]\s*/, '')
+                               .trim();
+
+                if (cleaned && !/^(?:total|status|pic|cc|note|shift|ng|section|reason|lot\s*id|action|ink)\b/i.test(cleaned)) {
+                    let parts = cleaned.split(/[,;\s/&]+|\b(?:dan|and)\b/i);
+                    parts.forEach(p => {
+                        let id = p.trim().replace(/^[^\w]+|[^\w]+$/g, '');
+                        if (id && !/^\d+$/.test(id) && !/^(?:ea|pcs|pc|total|ok|ng|cell|id)$/i.test(id)) {
+                            cellIds.push(id);
+                        }
+                    });
+                }
+            });
+        }
+
+        // Qty dihitung dari banyaknya Cell ID
+        let qty = cellIds.length;
+        if (qty === 0) {
+            let qtyRaw = extractBlock('Total', text) || extractBlock('Qty', text) || extractBlock('Count', text);
+            if (qtyRaw) {
+                let matchNum = qtyRaw.match(/\d+/);
+                qty = matchNum ? matchNum[0] : qtyRaw;
+            }
+        }
+
+        let ngKetika = extractBlock('NG Ketika', text) || extractBlock('Ketika', text);
+        if (/normal/i.test(ngKetika)) {
+            ngKetika = 'Normal Run';
+        }
+
+        let inkLevel = extractBlock('Ink Level', text) || extractBlock('Ink', text);
+        let category = extractBlock('Category', text) || extractBlock('Kategori', text);
+        let action = extractBlock('Action', text) || extractBlock('Countermeasure', text);
+        let status = 'Closed';
+
+        let picRaw = extractBlock('PIC', text);
+        if (picRaw) picRaw = picRaw.replace(/\([^)]*\)/g, '').trim();
+        let pic = formatPicNames(picRaw);
+
+        let row = [
+            date,
+            time,
+            shift,
+            line,
+            lotId,
+            side,
+            qty,
+            ngKetika,
+            inkLevel,
+            category,
+            action,
+            status,
+            pic
+        ].map(col => (col || '').toString().replace(/[\r\n]+/g, ' ').trim());
+
+        allResults.push(row.join('\t'));
+    });
+
+    return allResults.join('\n');
+}
         
         // 5.A FORMAT TOP 5 NORMAL
         function formatTop5(text) {
