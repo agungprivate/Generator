@@ -1039,6 +1039,7 @@
         }
 
         // 3.C FORMAT CRACK - QA
+        // Format Kolom: [Auto No (+1)]\tDate(YYYY-MM-DD)\tTime\tLine\tLot ID\tPouch Lot\tCount Cleaning cycle\tIssue
         function formatCrackQA(text) {
             let lineMatch = text.match(/(?:Line|PKG)\s*[:=–-]?\s*([0-9]+[\.\-_][0-9]+)/i);
             let line = lineMatch ? lineMatch[1].replace(/[\._]/g, '-') : extractBlock('Line', text).replace(/[\._]/g, '-');
@@ -1046,6 +1047,7 @@
             let lotId = extractBlock('Lot ID', text) || extractBlock('LotID', text) || extractBlock('Lot', text);
             let pouchLot = extractBlock('Pouch Lot', text) || extractBlock('Pouch ID', text) || extractBlock('Lot Pouch', text);
 
+            // Ekstraksi tanggal acuan dari 2 digit tanggal di Lot ID (YYYY-MM-DD)
             let date = '';
             let matchLotDate = (lotId || '').match(/[A-Z0-9]{4,5}(\d{2})/i);
             if (matchLotDate) {
@@ -1080,14 +1082,19 @@
                            extractBlock('Qty', text);
             let count = countRaw ? countRaw.replace(/\./g, '').replace(/[^0-9]/g, '') : '';
 
+            // Klasifikasi Issue: Overkill -> Pinhole, Real/Crack -> Crack, Pinhole -> Pinhole
             let issue = 'Crack';
             let lower = text.toLowerCase();
-            if (lower.includes('pinhole') || lower.includes('pin hole')) {
+
+            if (lower.includes('overkill')) {
                 issue = 'Pinhole';
-            } else if (lower.includes('crack')) {
+            } else if (lower.includes('real') || lower.includes('crack')) {
                 issue = 'Crack';
+            } else if (lower.includes('pinhole') || lower.includes('pin hole')) {
+                issue = 'Pinhole';
             }
 
+            // Rumus Excel otomatis nomor sel atas + 1
             const autoFormulaNo = '=OFFSET(INDIRECT(ADDRESS(ROW(),COLUMN())),-1,0)+1';
 
             return `${autoFormulaNo}\t${date}\t${time}\t${line}\t${lotId}\t${pouchLot}\t${count}\t${issue}`;
