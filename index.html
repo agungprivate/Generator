@@ -477,28 +477,28 @@
             return `${year}-${month}-${day}`;
         }
 
-      function adjustWorkDate(rawDate, timeStr, fullBlock = '') {
+      // Helper Work Date (Cut-off tepat jam 06:00 pagi)
+        function adjustWorkDate(rawDate, timeStr, fullBlock = '') {
             let parsed = parseRawDateComponents(rawDate);
             let dateObj = parsed ? new Date(parsed.y, parsed.m, parsed.d) : new Date();
 
             let hour = null;
+
+            // 1. Cek jam dari parameter timeStr (misal: "01:21", "02.48")
             let matchHour = (timeStr || '').match(/\b(\d{1,2})[.:]\d{2}\b/);
             if (matchHour) {
                 hour = parseInt(matchHour[1], 10);
             } else if (fullBlock) {
-                let waMatch = fullBlock.match(/(?:Start Time|Time|Jam)[\s*:=–-]*(\d{1,2})[.:]\d{2}/i) || 
-                              fullBlock.match(/\[(\d{1,2})[.:]\d{2}/);
-                if (waMatch) {
-                    hour = parseInt(waMatch[1], 10);
+                // 2. Cek jam dari teks pesan (Start Time, Time, Jam, atau stempel WA)
+                let matchInText = fullBlock.match(/(?:Start Time|Time|Jam|Waktu)[\s*:=–-]*(\d{1,2})[.:]\d{2}/i) || 
+                                  fullBlock.match(/\[(\d{1,2})[.:]\d{2}/);
+                if (matchInText) {
+                    hour = parseInt(matchInText[1], 10);
                 }
             }
 
-            let isShift3 = /shift\s*3\b/i.test(fullBlock);
-
-            // Jika jam sebelum 06:00 (dini hari), otomatis masuk tanggal kerja kemarin
+            // Cut-off tepat jam 06:00 (jika jam 0 s/d 5, mundur 1 hari)
             if (hour !== null && hour < 6) {
-                dateObj.setDate(dateObj.getDate() - 1);
-            } else if (isShift3 && hour !== null && hour < 7) {
                 dateObj.setDate(dateObj.getDate() - 1);
             }
 
