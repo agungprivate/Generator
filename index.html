@@ -846,7 +846,7 @@
             return result;
         }
 
-        // 2. FORMAT WRINKLE
+       // 2. FORMAT WRINKLE (Tanggal patuh teks input, tidak mundur di jam subuh)
         function formatExcel(fullText) {
             if (!fullText) return '';
 
@@ -903,7 +903,8 @@
                     }
                 }
 
-                let date = adjustWorkDate(rawDate, timeRaw, text);
+                // Menggunakan formatDateIso agar patuh pada tanggal yang tertulis di pesan
+                let date = formatDateIso(rawDate);
 
                 let matchProb = text.match(/(?:^|\n)[\s*_-]*Problem[\s*_-]*[:=–-]\s*([^\n]+)/i);
                 let problem = matchProb ? matchProb[1].trim() : extractBlock('Problem', text);
