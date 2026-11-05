@@ -1105,13 +1105,14 @@
             return `${autoFormulaNo}\t${date}\t${time}\t${line}\t${lotId}\t${pouchLot}\t${count}\t${issue}`;
         }
 
-        // FUNGSI KLASIFIKASI NG NAME (REWORK)
+       // FUNGSI KLASIFIKASI NG NAME (REWORK)
         function matchKlasifikasiNG(fullText, ngRaw) {
             let cleanFull = (fullText || '').replace(/\u00A0/g, ' ');
             let raw = (ngRaw || '').replace(/\u00A0/g, ' ');
 
             let cleanedNg = raw.replace(/\(.*?\)/gi, '').trim();
             let ng_lower = cleanedNg.replace(/[_-]/g, ' ').toLowerCase();
+            let raw_lower = raw.toLowerCase();
 
             let sign = '-';
             let visionMatch = cleanFull.match(/(?:Tape\s*Vision|Vision|NG)[^\n]*?[\(\[]\s*([+-])\s*[\)\]]/i);
@@ -1121,6 +1122,20 @@
                 sign = '+';
             } else if (/[\(\[]\s*-\s*[\)\]]|\bminus\b/i.test(cleanFull)) {
                 sign = '-';
+            }
+
+            // 1. Prioritaskan Lead Vision (termasuk leadsealing, lead sealing, lead pos, baik ada overkill maupun tidak)
+            if (
+                raw_lower.includes('leadsealing') ||
+                raw_lower.includes('lead sealing') ||
+                ng_lower.includes('lead sealing') ||
+                ng_lower.includes('lead pos') || 
+                ng_lower.includes('leadpos') || 
+                ng_lower.includes('lead position') || 
+                ng_lower.includes('lead vision') || 
+                ng_lower.includes('vision lead')
+            ) {
+                return 'Lead Vision';
             }
 
             if (
@@ -1159,16 +1174,6 @@
                 return 'V Sealing';
             }
 
-            if (
-                ng_lower.includes('lead sealing') ||
-                ng_lower.includes('lead pos') || 
-                ng_lower.includes('leadpos') || 
-                ng_lower.includes('lead position') || 
-                ng_lower.includes('lead vision') || 
-                ng_lower.includes('vision lead')
-            ) {
-                return 'Lead Vision';
-            }
             if (ng_lower.includes('sealing vision') || ng_lower.includes('sealing ng') || ng_lower.includes('sealing')) {
                 return 'Sealing Vision';
             }
