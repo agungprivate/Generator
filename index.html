@@ -1277,7 +1277,7 @@
             let invalidCellIds = [];
               
             blocks.forEach(text => {
-                let lineMatch = text.match(/(?:^|\n)\s*(?:#\s*PKG|Line\s*[:=–-]\s*PKG|Line\s*[:=–-]|PKG|#)?\s*([0-9]+-[0-9]+)/i);
+                let lineMatch = text.match(/(?:^|\n)\s*(?:#\s*(?:line|pkg)?|line\s*[:=–-]?\s*(?:pkg)?|pkg)?\s*([0-9]+-[0-9]+)/i);
                 let line = lineMatch ? `PKG ${lineMatch[1]}` : '';
 
                 if (!line) return;
@@ -1490,7 +1490,7 @@
             let allResults = [];
 
             blocks.forEach(text => {
-                let lineMatch = text.match(/(?:^|\n)\s*(?:#\s*PKG|Line\s*[:=–-]\s*PKG|Line\s*[:=–-]|PKG|#)?\s*([0-9]+-[0-9]+)/i);
+                let lineMatch = text.match(/(?:^|\n)\s*(?:#\s*(?:line|pkg)?|line\s*[:=–-]?\s*(?:pkg)?|pkg)?\s*([0-9]+-[0-9]+)/i);
                 let line = lineMatch ? `="${lineMatch[1]}"` : '';
                 if (!line) return;
 
