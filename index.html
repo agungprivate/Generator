@@ -1688,13 +1688,33 @@
             let lineMatch = text.match(/(?:Line\s*ID|Line|PKG)\s*[:=–-]?\s*(?:PKG\s*)?([0-9]+-[0-9]+)/i);
             let line = lineMatch ? `="${lineMatch[1]}"` : '';
 
-            // 2. Polarity dari Location: (-) -> Anode, (+) -> Cathode
+           // 2. Polarity: Cek di Location terlebih dahulu, jika kosong cek di Problem & Action
             let locationRaw = extractBlock('Location', text);
+            let problemRaw = extractBlock('Problem', text);
             let polarity = '';
-            if (/[-–—]/.test(locationRaw) || /anode/i.test(locationRaw)) {
-                polarity = 'Anode';
-            } else if (/\+/.test(locationRaw) || /cathode/i.test(locationRaw)) {
-                polarity = 'Cathode';
+
+            function detectPolarity(str) {
+                if (!str) return '';
+                // Deteksi tanda (-) / – / — atau kata anode
+                if (/\(\s*[-–—]\s*\)|[-–—]|\banode\b/i.test(str)) {
+                    return 'Anode';
+                }
+                // Deteksi tanda (+) atau kata cathode
+                if (/\(\s*\+\s*\)|\+|\bcathode\b/i.test(str)) {
+                    return 'Cathode';
+                }
+                return '';
+            }
+
+            polarity = detectPolarity(locationRaw) || detectPolarity(problemRaw);
+
+            // Fallback terakhir: cek keseluruhan teks (misalnya jika tanda (-) hanya tertulis di Action)
+            if (!polarity) {
+                if (/\(\s*[-–—]\s*\)|\banode\b/i.test(text)) {
+                    polarity = 'Anode';
+                } else if (/\(\s*\+\s*\)|\bcathode\b/i.test(text)) {
+                    polarity = 'Cathode';
+                }
             }
 
             // 3. Issue Date & Date (Cut-off Shift 3: jika jam < 06:00, mundur 1 hari)
