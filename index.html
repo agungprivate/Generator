@@ -1087,16 +1087,14 @@
                            extractBlock('Qty', text);
             let count = countRaw ? countRaw.replace(/\./g, '').replace(/[^0-9]/g, '') : '';
 
-            // Klasifikasi Issue: Overkill -> Pinhole, Real/Crack -> Crack, Pinhole -> Pinhole
-            let issue = 'Crack';
+           // Klasifikasi Issue: Overkill -> Pinhole (Overkill), selain itu -> Crack
+            let issue = '';
             let lower = text.toLowerCase();
 
             if (lower.includes('overkill')) {
-                issue = 'Pinhole';
-            } else if (lower.includes('real') || lower.includes('crack')) {
+                issue = 'Pinhole (Overkill)';
+            } else {
                 issue = 'Crack';
-            } else if (lower.includes('pinhole') || lower.includes('pin hole')) {
-                issue = 'Pinhole';
             }
 
             // Rumus Excel otomatis nomor sel atas + 1
