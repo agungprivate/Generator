@@ -1061,14 +1061,14 @@
                            extractBlock('Qty', text);
             let count = countRaw ? countRaw.replace(/\./g, '').replace(/[^0-9]/g, '') : '';
 
-            // Klasifikasi Issue: Overkill (termasuk typo overkil / over kill) -> Pinhole (Overkill), selain itu -> Crack
+           // Klasifikasi Issue: Overkill -> Pinhole (Overkill), selain itu -> Pinhole (Real)
             let issue = '';
             let lower = text.toLowerCase();
 
             if (/over\s*kill?/i.test(lower)) {
                 issue = 'Pinhole (Overkill)';
             } else {
-                issue = 'Crack';
+                issue = 'Pinhole (Real)';
             }
 
             // Rumus Excel otomatis nomor sel atas + 1
