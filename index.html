@@ -1340,8 +1340,8 @@
                     detailReason = matchReason[1].replace(/\s+/g, ' ').trim();
                 }
 
-                let cellIds = [];
-                let matchCellBlock = text.match(/(?:^|\n)[\s*•_–.-]*Cell\s*[-_]?\s*ID\s*[:=–-]?\s*([\s\S]*?)(?=\s*(?:\n[\s*•_–.-]*(?:total|status|pic|cc|note|shift|ng|section|reason|lot\s*id)\b|$))/i);
+               let cellIds = [];
+                let matchCellBlock = text.match(/(?:^|\n)[\s*•_–.-]*Cell\s*[-_]?\s*ID\s*[:=–-]?\s*([\s\S]*?)(?=\s*(?:(?:\n|^|\s+)[-*•_–.]*\s*(?:total|status|pic|cc|note|shift|ng|section|reason|lot\s*id)\s*[:=–-]|$))/i);
 
                 if (matchCellBlock && matchCellBlock[1].trim()) {
                     let rawCellText = matchCellBlock[1].trim();
@@ -1396,6 +1396,7 @@
                 cellIds.forEach(cellId => {
                     if (cellId !== '' && cellId.length !== 10) {
                         invalidCellIds.push({ id: cellId, len: cellId.length });
+                        return; // Tolak / blokir Cell ID yang tidak 10 digit agar tidak lolos ke output
                     }
 
                     let pkgId = (section === 'EL') ? cellId : '';
