@@ -850,6 +850,19 @@
         function formatExcel(fullText) {
             if (!fullText) return '';
 
+            // Helper lokal khusus Wrinkle agar field kosong tidak menyerobot baris berikutnya
+            function extractWrinkleField(keyword, blockText) {
+                if (!blockText || !keyword) return '';
+                const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                const regex = new RegExp('(?:^|\\n)[\\s*_\\[\\]()#–-]*' + escaped + '[\\s*_\\[\\]()#–-]*[:=–-]\\s*(.*)', 'i');
+                const match = blockText.match(regex);
+                if (!match) return '';
+
+                let rawVal = match[1] ? match[1].trim() : '';
+                if (!rawVal || /^[-–—]+$/.test(rawVal)) return '';
+                return cleanText(rawVal);
+            }
+
             let cleanFull = fullText
                 .replace(/[\u200B-\u200D\uFEFF]/g, '')
                 .replace(/\u00A0/g, ' ')
@@ -858,7 +871,7 @@
             cleanFull = cleanFull.replace(/\[\d{1,2}[.:]\d{2},\s*\d{1,2}\/\d{1,2}\/\d{2,4}\]\s*[^:\n]+:\s*/g, '\n');
 
             let blocks = cleanFull
-                .split(/(?=[?Problem Report]?|(?:^|\n)\s*Shift\s*\d+\s*\n+\s*(?:Line|PKG)\s*[:=–-])/i)
+                .split(/(?=\[?Problem Report\]?|(?:^|\n)\s*Shift\s*\d+\s*\n+\s*(?:Line|PKG)\s*[:=–-])/i)
                 .map(b => b.trim())
                 .filter(b => b.length > 0 && /(?:Line|PKG|Problem|Pouch)/i.test(b));
 
@@ -877,7 +890,7 @@
             let allRows = [];
 
             blocks.forEach(text => {
-                let line = extractBlock('Line', text);
+                let line = extractWrinkleField('Line', text);
                 if (!line) {
                     let matchLine = text.match(/(?:^|\n)\s*(?:Line|PKG)?\s*[:=–-]?\s*(PKG\s*[0-9]+-[0-9]+|[0-9]+-[0-9]+)/i);
                     if (matchLine) line = matchLine[1].toUpperCase();
@@ -885,45 +898,39 @@
 
                 if (!line) return;
 
-                let rawDate = extractBlock('Date', text) || extractBlock('Tanggal', text);
+                let rawDate = extractWrinkleField('Date', text) || extractWrinkleField('Tanggal', text);
                 if (!rawDate) {
                     let matchDate = text.match(/\b\d{1,2}\s+[A-Za-z]+\s+\d{2,4}\b/) ||
                                     text.match(/\b\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}\b/);
                     if (matchDate) rawDate = matchDate[0];
                 }
 
-                let timeRaw = extractBlock('TIME', text) || extractBlock('Jam', text) || extractBlock('Waktu', text);
-                if (!timeRaw) {
-                    let matchTimes = text.match(/(?:TIME|Jam|Waktu)\s*[:=–-]?\s*([0-9.,\s&\/;-]+)/i);
-                    if (matchTimes) {
-                        timeRaw = matchTimes[1].trim();
-                    } else {
-                        let fallbackTimes = text.match(/\b\d{1,2}[.:]\d{2}\b/g);
-                        if (fallbackTimes) timeRaw = fallbackTimes.join(' & ');
-                    }
+                let hasTimeLabel = /(?:^|\n)[\s*_-]*(?:TIME|Jam|Waktu)[\s*_-]*[:=–-]/i.test(text);
+                let timeRaw = extractWrinkleField('TIME', text) || extractWrinkleField('Jam', text) || extractWrinkleField('Waktu', text);
+                if (!timeRaw && !hasTimeLabel) {
+                    let fallbackTimes = text.match(/\b\d{1,2}[.:]\d{2}\b/g);
+                    if (fallbackTimes) timeRaw = fallbackTimes.join(' & ');
                 }
 
                 // Menggunakan formatDateIso agar patuh pada tanggal yang tertulis di pesan
                 let date = formatDateIso(rawDate);
 
-                let matchProb = text.match(/(?:^|\n)[\s*_-]*Problem[\s*_-]*[:=–-]\s*([^\n]+)/i);
-                let problem = matchProb ? matchProb[1].trim() : extractBlock('Problem', text);
-
-                let pouchId = extractBlock('Pouch ID', text) || extractBlock('Pouch Lot', text) || extractBlock('Pouch', text) || extractBlock('Lot Pouch', text);
-                let countRaw = extractBlock('Count', text);
+                let problem = extractWrinkleField('Problem', text);
+                let pouchId = extractWrinkleField('Pouch ID', text) || extractWrinkleField('Pouch Lot', text) || extractWrinkleField('Pouch', text) || extractWrinkleField('Lot Pouch', text);
+                let countRaw = extractWrinkleField('Count', text);
                 
-                let picRaw = extractBlock('PIC', text);
+                let picRaw = extractWrinkleField('PIC', text);
                 if (picRaw) {
                     picRaw = picRaw.replace(/\([^)]*\)/g, '').trim();
                 }
                 let pic = formatPicNames(picRaw);
 
-                let splitRegex = /[,\/;&]+|\b(?:dan|and)\b/i;
+                let splitRegex = /[,\/; &]+|\b(?:dan|and)\b/i;
                 
                 let times = timeRaw
                     ? timeRaw.split(splitRegex)
                              .map(t => t.trim().replace(/(\d{1,2})\.(\d{2})/, '$1:$2'))
-                             .filter(t => t.length > 0)
+                             .filter(t => t.length > 0 && t !== '-')
                     : [];
                 let counts = countRaw
                     ? countRaw.split(splitRegex)
@@ -987,25 +994,9 @@
             let lotId = extractBlock('Lot ID', text) || extractBlock('LotID', text) || extractBlock('Lot', text);
             let pouchLot = extractBlock('Pouch Lot', text) || extractBlock('Pouch ID', text) || extractBlock('Lot Pouch', text);
 
-            let date = '';
-            let matchLotDate = (lotId || '').match(/[A-Z0-9]{4,5}(\d{2})/i);
-            if (matchLotDate) {
-                let day = matchLotDate[1];
-                let today = new Date();
-                let y = today.getFullYear();
-                let m = String(today.getMonth() + 1).padStart(2, '0');
-                date = `${y}-${m}-${day}`;
-            }
-
-            if (!date) {
-                let rawDate = extractBlock('Date', text) || extractBlock('Tanggal', text);
-                if (!rawDate) {
-                    let matchDate = text.match(/\b\d{1,2}\s+[A-Za-z]+\s+\d{2,4}\b/) ||
-                                    text.match(/\b\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}\b/);
-                    if (matchDate) rawDate = matchDate[0];
-                }
-                date = formatDateIso(rawDate);
-            }
+            // Tanggal otomatis mengikuti hari ini (YYYY-MM-DD), atau baca Date/Tanggal jika ditulis manual
+            let rawDate = extractBlock('Date', text) || extractBlock('Tanggal', text);
+            let date = formatDateIso(rawDate);
 
             let timeRaw = extractBlock('Time', text) || extractBlock('Jam', text) || extractBlock('Waktu', text);
             let countRaw = extractBlock('Count Cleaning Forming', text) ||
@@ -1052,26 +1043,9 @@
             let lotId = extractBlock('Lot ID', text) || extractBlock('LotID', text) || extractBlock('Lot', text);
             let pouchLot = extractBlock('Pouch Lot', text) || extractBlock('Pouch ID', text) || extractBlock('Lot Pouch', text);
 
-            // Ekstraksi tanggal acuan dari 2 digit tanggal di Lot ID (YYYY-MM-DD)
-            let date = '';
-            let matchLotDate = (lotId || '').match(/[A-Z0-9]{4,5}(\d{2})/i);
-            if (matchLotDate) {
-                let day = matchLotDate[1];
-                let today = new Date();
-                let y = today.getFullYear();
-                let m = String(today.getMonth() + 1).padStart(2, '0');
-                date = `${y}-${m}-${day}`;
-            }
-
-            if (!date) {
-                let rawDate = extractBlock('Date', text) || extractBlock('Tanggal', text);
-                if (!rawDate) {
-                    let matchDate = text.match(/\b\d{1,2}\s+[A-Za-z]+\s+\d{2,4}\b/) ||
-                                    text.match(/\b\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}\b/);
-                    if (matchDate) rawDate = matchDate[0];
-                }
-                date = formatDateIso(rawDate);
-            }
+            // Tanggal otomatis mengikuti hari ini (YYYY-MM-DD), atau baca Date/Tanggal jika ditulis manual
+            let rawDate = extractBlock('Date', text) || extractBlock('Tanggal', text);
+            let date = formatDateIso(rawDate);
 
             let timeRaw = extractBlock('Time', text) || extractBlock('Jam', text) || extractBlock('Waktu', text);
             let time = '';
